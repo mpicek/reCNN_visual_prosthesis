@@ -1,0 +1,3 @@
+datajoint==0.12.4
+neuralpredictors=0.0.1  # there was ~=
+nnfabrik                # --pre
