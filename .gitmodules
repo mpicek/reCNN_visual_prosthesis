@@ -1,0 +1,3 @@
+[submodule "predict_neural_responses"]
+	path = predict_neural_responses
+	url = git@github.com:mpicek/predict_neural_responses.git
