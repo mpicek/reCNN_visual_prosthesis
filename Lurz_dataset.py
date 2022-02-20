@@ -17,9 +17,23 @@ from neuralpredictors.data.transforms import (
 )
 from neuralpredictors.data.samplers import SubsetSequentialSampler
 
+import sys
+import zipfile
+import pathlib
+from distutils.dir_util import copy_tree
+import shutil
+import wget
+import requests
+import os
+from io import BytesIO
+
 
 # TODO: normalizaci a pripadne dalsi transformace dat do transforms
 class LurzDataModule(pl.LightningDataModule):
+
+    _URL = "https://gin.g-node.org/cajal/Lurz2020/archive/master.zip"
+
+
     def __init__(
         self,
         data_dir,
@@ -87,7 +101,30 @@ class LurzDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # we should not do anything like self.x = y # = assign state
         # just download the data
-        pass
+        path = pathlib.Path(self.data_dir)
+        
+        if not path.exists():
+            print(f"Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.", file=sys.stderr)
+            wget.download(self._URL)
+            # req = requests.get(self._URL)
+            # zipfile = zipfile.ZipFile(BytesIO(req.content))
+            # zipfile.extractall("tmp_lurz_extracted")
+
+
+            # with open("Lurz2020-master.zip", "wb") as output_zip:
+                # output_zip.write(req.content)
+
+            print(f"Unzipping the dataset to temporary folder ./tmp_lurz_extracted.", file=sys.stderr)
+            with zipfile.ZipFile("Lurz2020-master.zip", "r") as zip_ref:
+                zip_ref.extractall("tmp_lurz_extracted")
+
+            pathlib.Path(self.data_dir).mkdir(parents=True)
+
+            print(f"Copying the temporarily unzipped folder to the specified path", file=sys.stderr)
+            copy_tree("./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0", str(path))
+            print(f"Removing the temporary folder and the downloaded .zip file.", file=sys.stderr)
+            shutil.rmtree("tmp_lurz_extracted")
+            os.remove("Lurz2020-master.zip")
 
 
     def setup(self, stage: Optional[str] = None):
