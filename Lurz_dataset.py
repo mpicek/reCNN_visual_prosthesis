@@ -17,6 +17,8 @@ from neuralpredictors.data.transforms import (
 )
 from neuralpredictors.data.samplers import SubsetSequentialSampler
 
+from typing import Optional
+
 import sys
 import zipfile
 import pathlib
@@ -30,6 +32,19 @@ from io import BytesIO
 
 # TODO: normalizaci a pripadne dalsi transformace dat do transforms
 class LurzDataModule(pl.LightningDataModule):
+    """
+    Based on Lurz 2020 code - mouse_loaders.py.
+    We work with just one dataset (not multiple), therefore static_loaders were
+    ignored, we worked only with ONE static_loader.
+    Furthermore, static_shared_loaders were also ignored.
+
+    In this code, there are comments that explain, what exactly was changed.
+    The code was updated to work with neuralpredictors version 0.2.0, Lurz's code
+    did not work with this version (it worked with 0.0.3 version)
+
+    This class is an implementation of PyTorch Lightning LightningDataModule,
+    so that we can use PyTorch Lightning.
+    """
 
     _URL = "https://gin.g-node.org/cajal/Lurz2020/archive/master.zip"
 
@@ -79,12 +94,13 @@ class LurzDataModule(pl.LightningDataModule):
         self.return_test_sampler=return_test_sampler
         self.oracle_condition=oracle_condition
         
+        # following lines all copied ... just some checks
         assert any(
         [image_ids is None, all([image_n is None, image_base_seed is None])]
         ), "image_ids can not be set at the same time with anhy other image selection criteria"
         assert any(
             [
-                neuron_ids is None,
+                self.neuron_ids is None,
                 all([neuron_n is None, neuron_base_seed is None, areas is None, layers is None, exclude_neuron_n == 0]),
             ]
         ), "neuron_ids can not be set at the same time with any other neuron selection criteria"
@@ -104,17 +120,12 @@ class LurzDataModule(pl.LightningDataModule):
         path = pathlib.Path(self.data_dir)
         
         if not path.exists():
+            print("We have to download and prepare the data.");
+            print("This might take a long time (~1 hour).")
             print(f"Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.", file=sys.stderr)
             wget.download(self._URL)
-            # req = requests.get(self._URL)
-            # zipfile = zipfile.ZipFile(BytesIO(req.content))
-            # zipfile.extractall("tmp_lurz_extracted")
 
-
-            # with open("Lurz2020-master.zip", "wb") as output_zip:
-                # output_zip.write(req.content)
-
-            print(f"Unzipping the dataset to temporary folder ./tmp_lurz_extracted.", file=sys.stderr)
+            print(f"\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.", file=sys.stderr)
             with zipfile.ZipFile("Lurz2020-master.zip", "r") as zip_ref:
                 zip_ref.extractall("tmp_lurz_extracted")
 
@@ -128,15 +139,18 @@ class LurzDataModule(pl.LightningDataModule):
 
 
     def setup(self, stage: Optional[str] = None):
-        # stage is "fit" or "test"
+        # stage is "fit" or "test" or "predict"
         # when stage=None -> both "fit" and "test"
 
+        # we use only FileTreeDataset (no StaticImageSet) as it was turn on by default
         self.dat = (
             FileTreeDataset(self.data_dir, "images", "responses", "behavior")
             if self.include_behavior
             else FileTreeDataset(self.data_dir, "images", "responses")
         )
 
+        # following lines all copied
+        # original comment:
         # The permutation MUST be added first and the conditions below MUST NOT be based on the original order
         # specify condition(s) for sampling neurons. If you want to sample specific neurons define conditions that would effect idx
         conds = np.ones(len(self.dat.neurons.area), dtype=bool)
@@ -152,13 +166,14 @@ class LurzDataModule(pl.LightningDataModule):
             assert (
                 len(self.dat.neurons.unit_ids) >= self.exclude_neuron_n + self.neuron_n
             ), "After excluding {} neurons, there are not {} neurons left".format(self.exclude_neuron_n, self.neuron_n)
-            neuron_ids = np.random.choice(self.dat.neurons.unit_ids, size=self.exclude_neuron_n + self.neuron_n, replace=False)[
+            self.neuron_ids = np.random.choice(self.dat.neurons.unit_ids, size=self.exclude_neuron_n + self.neuron_n, replace=False)[
                 self.exclude_neuron_n:
             ]
             np.random.set_state(random_state)
-        if neuron_ids is not None:
-            idx = [np.where(self.dat.neurons.unit_ids == unit_id)[0][0] for unit_id in neuron_ids]
+        if self.neuron_ids is not None:
+            idx = [np.where(self.dat.neurons.unit_ids == unit_id)[0][0] for unit_id in self.neuron_ids]
 
+        # following lines all copied (but tensors don't go to cuda)
         # transforms .. ToTensor -> no Cuda as it handles the Trainer from Pytorch Lightning
         self.more_transforms = [Subsample(idx), ToTensor(cuda=False)]
         if self.normalize:
@@ -173,10 +188,27 @@ class LurzDataModule(pl.LightningDataModule):
         # add transforms to the dataset
         self.dat.transforms.extend(self.more_transforms)
 
+
+        # These two lines changed
+        # tier_array = dat.trial_info.tiers if file_tree else dat.tiers
+        # image_id_array = dat.trial_info.frame_image_id if file_tree else dat.info.frame_image_id
+        # to these lines:
         tier_array = self.dat.trial_info.tiers
         image_id_array = self.dat.trial_info.frame_image_id
 
 
+        # no return of test_sampler (deleted)
+
+
+        # the rest of this method was altered a little bit just because of the
+        # previous decisions - there are no "tiers", we create train, val test
+        # based on stage variable. So only the "decision logic" is a little different
+        # (if conditions), but the functionality is basicly the same
+
+        # for creating the separate datasets, we choose ids and create a SubsetSampler
+        # that samples the correct images
+        
+        # train, test and val datasets are later created based on 
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None: # TODO: predict make separate 
@@ -204,6 +236,16 @@ class LurzDataModule(pl.LightningDataModule):
             subset_idx_test = np.where(tier_array == "test")[0]
             self.test_sampler = SubsetSequentialSampler(subset_idx_test)
 
+        
+
+    def print_dataset_info(self):
+        """
+        Creates a train dataloader, gets first piece of data and prints its shape
+        """
+        dataloader = DataLoader(self.dat, sampler=self.train_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+
+        print(next(iter(dataloader)).images.shape)
+        print(next(iter(dataloader)).responses.shape)
 
     def train_dataloader(self):
         return DataLoader(self.dat, sampler=self.train_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
