@@ -1,11 +1,9 @@
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
-
-from collections import OrderedDict
-from itertools import zip_longest
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
+import torch
 
 from neuralpredictors.data.datasets.statics.filetree import FileTreeDataset
 from neuralpredictors.data.transforms import (
@@ -25,9 +23,7 @@ import pathlib
 from distutils.dir_util import copy_tree
 import shutil
 import wget
-import requests
 import os
-from io import BytesIO
 
 
 # TODO: normalizaci a pripadne dalsi transformace dat do transforms
@@ -229,26 +225,81 @@ class LurzDataModule(pl.LightningDataModule):
                 subset_idx_train = np.where(tier_array == "train")[0]
             
 
-            self.train_sampler = SubsetRandomSampler(subset_idx_train)
+            self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
+            self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
+            
             self.val_sampler = SubsetSequentialSampler(subset_idx_val)
         
         if stage == "test" or stage is None:
             subset_idx_test = np.where(tier_array == "test")[0]
             self.test_sampler = SubsetSequentialSampler(subset_idx_test)
 
-        
+    def get_input_shape(self):
+        return self.dat[0].images.shape
+
+    def get_output_shape(self):
+        return self.dat[0].responses.shape
+
+    def get_mean_fast(self):
+        """ Computes the mean response of the validation dataset (much smaller than the train set) """
+        dataloader = DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size)
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+        return mean
+    
+    def get_mean(self):
+        """ Computes the mean response of the train dataset """
+
+        dataloader = DataLoader(self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size)
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+        return mean
+    
+    def train_len(self):
+        return len(self.train_random_sampler)
+    
+    def val_len(self):
+        return len(self.val_sampler)
+    
+    def test_len(self):
+        return len(self.test_sampler)
+    
+    def __len__(self):
+        """The length of ALL the data we have (train + val + test)"""
+        return len(self.dat)
 
     def print_dataset_info(self):
         """
         Creates a train dataloader, gets first piece of data and prints its shape
         """
-        dataloader = DataLoader(self.dat, sampler=self.train_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
-
+        print(" ------------ DATASET INFO ------------ ")
+        print(" SHAPES:")
+        dataloader = DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+        print(f"    Input shape (images): {self.get_input_shape()}")
+        print("    With batch size also: ", end='')
         print(next(iter(dataloader)).images.shape)
+
+        print(f"    Output shape (responses): {self.get_output_shape()}")
+        print("    With batch size also: ", end='')
         print(next(iter(dataloader)).responses.shape)
 
+        print(" LENGTH:")
+        print(f"    Length of the dataset is {len(self)}")
+        print(f"    Length of the train set is {self.train_len()}")
+        print(f"    Length of the val set is {self.val_len()}")
+        print(f"    Length of the test set is {self.test_len()}")
+        
+        print(" -------------------------------------- ")
+        
+
     def train_dataloader(self):
-        return DataLoader(self.dat, sampler=self.train_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
 
     def val_dataloader(self):
         return DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size)
@@ -259,3 +310,4 @@ class LurzDataModule(pl.LightningDataModule):
     def predict_dataloader(self):
         # TODO: return some separate subset for prediction and not only test
         return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size)
+    
