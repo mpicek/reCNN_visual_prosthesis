@@ -15,6 +15,14 @@ from neuralpredictors.data.transforms import (
 )
 from neuralpredictors.data.samplers import SubsetSequentialSampler
 
+from neuralpredictors.measures.np_functions import (
+    oracle_corr_jackknife,
+    oracle_corr_conservative,
+    fev,
+)
+
+from tqdm import tqdm
+
 from typing import Optional
 
 import sys
@@ -66,7 +74,8 @@ class LurzDataModule(pl.LightningDataModule):
         select_input_channel=None,
         file_tree=True,
         return_test_sampler=False,
-        oracle_condition=None
+        oracle_condition=None,
+        num_workers=0
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -89,6 +98,7 @@ class LurzDataModule(pl.LightningDataModule):
         self.file_tree=file_tree
         self.return_test_sampler=return_test_sampler
         self.oracle_condition=oracle_condition
+        self.num_workers=num_workers
         
         # following lines all copied ... just some checks
         assert any(
@@ -299,15 +309,21 @@ class LurzDataModule(pl.LightningDataModule):
         
 
     def train_dataloader(self):
-        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size, num_workers=self.num_workers) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
 
     def val_dataloader(self):
-        return DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size)
+        return DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
 
     def test_dataloader(self):
-        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size)
+        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
 
     def predict_dataloader(self):
         # TODO: return some separate subset for prediction and not only test
-        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size)
+        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
     
+    def model_performances(self, model=None):
+        test = self.test_dataloader()
+        #TODO
+        for d in tqdm(test):
+            pprint(d)
+
