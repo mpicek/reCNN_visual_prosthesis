@@ -1,0 +1,28 @@
+program: train_model.py
+method: random
+metric:
+  goal: minimize
+  name: val/loss
+parameters:
+  max_epochs:
+    values: [100]
+  lr:
+    values: [0.00001, 0.0001]
+  core_layers:
+    values: [2, 3, 4, 5, 6]
+  core_input_kern:
+    values: [3, 5]
+  core_hidden_channels:
+    values: [32, 64, 128]
+  core_gamma_input:
+    values: [0.01, 0.001, 0.1]
+  core_gamma_hidden:
+    values: [0.01, 0.001, 0.1]
+  num_rotations:
+    values: [8, 16, 32]
+  stack:
+    values: [-1, -2]
+  readout_gamma:
+    values: [0.01, 0.1, 1, 10]
+  
+
