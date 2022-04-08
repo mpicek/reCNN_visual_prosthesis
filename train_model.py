@@ -9,6 +9,7 @@ import torch
 from models import Picek
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 import pytorch_lightning as pl
 
 # use as core: RotationEquivariant2dCore from neuralopredictors.layers.cores.conv2d 
@@ -106,9 +107,11 @@ def main():
     # define callbacks for train
     early_stop = EarlyStopping(monitor="val/corr", patience=7, mode="max")
 
+    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val/corr", mode="max")
+
     # define trainer
     trainer = pl.Trainer(
-        callbacks=[early_stop],
+        callbacks=[early_stop, checkpoint_callback],
         max_epochs=config["max_epochs"],
         gpus=[0],
         logger=wandb_logger,
@@ -123,21 +126,33 @@ def main():
         val_dataloaders=dm.val_dataloader(),
     )
 
+    # test on the model I have acquired from training (the last one)
+    trainer.test(model=model, dataloaders=dm.val_dataloader())
+
+    print(checkpoint_callback.best_model_path)
+    print(checkpoint_callback.best_model_score)
+
+    best_model = Picek.load_from_checkpoint(checkpoint_callback.best_model_path)
+
+    # test on the best model at all
+    trainer.test(model=best_model, dataloaders=dm.val_dataloader())
+    
+
     # predictions = trainer.test(model, dm.test_dataloader())
 
-    test = dm.test_dataloader()
-    predictions = None
-    global a
-    for d in tqdm(test):
-        pred = model(d.images)
-        if predictions == None:
-            predictions = pred
-        else:
-            predictions = torch.cat((predictions, pred))
-        # a = d
-        # break
+    # test = dm.test_dataloader()
+    # predictions = None
+    # global a
+    # for d in tqdm(test):
+    #     pred = model(d.images)
+    #     if predictions == None:
+    #         predictions = pred
+    #     else:
+    #         predictions = torch.cat((predictions, pred))
+    #     # a = d
+    #     # break
     
-    a = predictions
+    # a = predictions
     
 
 if __name__ == "__main__":
