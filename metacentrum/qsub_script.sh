@@ -8,7 +8,7 @@
 #PBS -N qsub_script
 #PBS -l select=1:ncpus=4:ngpus=1:mem=32gb:scratch_local=40gb
 #PBS -q gpu
-#PBS -l walltime=1:00:00
+#PBS -l walltime=8:00:00
 
 # Directory I use as a main storage
 DATADIR="/storage/budejovice1/home/$(whoami)"

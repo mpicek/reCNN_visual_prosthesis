@@ -5,7 +5,7 @@ metric:
   name: val/loss
 parameters:
   max_epochs:
-    values: [100]
+    values: [500]
   lr:
     values: [0.00001, 0.0001]
   core_layers:

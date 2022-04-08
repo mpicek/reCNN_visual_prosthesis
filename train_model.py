@@ -26,7 +26,7 @@ def main():
         "data_name": "PicekModel",
         "batch_size": 32,
         "lr": 0.00001,
-        "max_epochs": 1,
+        "max_epochs": 100,
 
         # CORE GENERAL CONFIG
         "core_hidden_channels": 12,
@@ -119,13 +119,13 @@ def main():
 
     trainer.fit(
         model,
-        train_dataloaders=dm.val_dataloader(),
+        train_dataloaders=dm.train_dataloader(),
         val_dataloaders=dm.val_dataloader(),
     )
 
     # predictions = trainer.test(model, dm.test_dataloader())
 
-    test = dm.val_dataloader()
+    test = dm.test_dataloader()
     predictions = None
     global a
     for d in tqdm(test):
