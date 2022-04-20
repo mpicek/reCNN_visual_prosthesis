@@ -7,6 +7,7 @@ import sys
 import os
 import argparse
 import subprocess
+import yaml
 
 def parse(filename):
     """
@@ -47,6 +48,12 @@ def parse(filename):
 def main(args):
     if args.script == None:
         raise ValueError("No script defined.")
+    
+    wandb_api_kdy = ""
+    if args.wandb_api_key:
+        config = yaml.safe_load(open("wandb_api_key.yaml"))
+        if "WANDB_API_KEY" in config:
+            wandb_api_kdy = ',WANDB_API_KEY="' + config["WANDB_API_KEY"] + '"'
 
     commands = parse(args.command_file)
 
@@ -60,7 +67,7 @@ def main(args):
             seed_var = 'SEED=' + str(seed)
             cmd_var = ',CMD="' + command_with_seed + '"'
             ensemble_var = ',ENSEMBLE="' + str(1) + '"'
-            variables = seed_var + cmd_var + ensemble_var
+            variables = seed_var + cmd_var + ensemble_var + wandb_api_kdy
             print(variables)
             list_files = subprocess.run(['qsub', '-v', variables, args.script])
 
@@ -71,9 +78,10 @@ def main(args):
             seed_var = 'SEED=' + str(seed)
             cmd_var = ',CMD="' + command_with_seed + '"'
             ensemble_var = ',ENSEMBLE="' + str(0) + '"'
-            variables = seed_var + cmd_var + ensemble_var
+            variables = seed_var + cmd_var + ensemble_var + wandb_api_kdy
             print(variables)
-            list_files = subprocess.run(['qsub', '-v', variables, args.script])
+            for i in range(args.num_of_command_repetitions):
+                list_files = subprocess.run(['qsub', '-v', variables, args.script])
 
     
 if __name__ == "__main__":
@@ -81,7 +89,9 @@ if __name__ == "__main__":
     parser.add_argument("--command_file", default="commands", type=str, help="File with commands to be run.")
     parser.add_argument("--script", default=None, type=str, help="File with a qsub script.")
     parser.add_argument("--ensemble", action='store_true', help="Create ensemble.")
+    parser.add_argument("--wandb_api_key", action='store_true', help="Read wandb_api_key.yaml file and set an ENV var with it.")
     parser.add_argument("--models", default=10, type=int, help="Number of models in an ensemble.")
+    parser.add_argument("--num_of_command_repetitions", default=1, type=int, help="Number of repetitions of each command in the command_file..")
 
     args = parser.parse_args()
     main(args)
