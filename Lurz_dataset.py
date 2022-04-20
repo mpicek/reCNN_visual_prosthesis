@@ -33,6 +33,46 @@ import shutil
 import wget
 import os
 
+# from neuralpredictors.data.samplers import RepeatsBatchSampler
+from neuralpredictors.measures.np_functions import corr
+
+
+from collections import Counter
+import numpy as np
+from torch.utils.data import Sampler
+import torch
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class RepeatsBatchSampler(Sampler):
+    def __init__(self, keys, subset_index=None, **kwargs):
+        """
+        Batch sampler where each batch consists of all samples with identical keys value.
+
+        Args:
+            keys (Any): list of keys used to group indicies.
+            subset_index (list of indices, optional): List of indices to subselect entries from keys.
+                            Defaults to None, where all indices from keys are used.
+        """
+        if subset_index is None:
+            subset_index = np.arange(len(keys))
+        _, inv = np.unique(keys[subset_index], return_inverse=True)
+        self.repeat_index = np.unique(inv)
+        self.repeat_sets = inv
+        self.subset_index = subset_index
+        self.batch_size = 10
+        # self.batch_size = self.repeat_sets
+
+    def __iter__(self):
+        for u in self.repeat_index:
+            self.batch_size = len(list(self.subset_index[self.repeat_sets == u]))
+            yield list(self.subset_index[self.repeat_sets == u])
+
+    def __len__(self):
+        return len(self.repeat_index)
+
 
 # TODO: normalizaci a pripadne dalsi transformace dat do transforms
 class LurzDataModule(pl.LightningDataModule):
@@ -113,7 +153,7 @@ class LurzDataModule(pl.LightningDataModule):
         assert any(
             [exclude_neuron_n == 0, neuron_base_seed is not None]
         ), "neuron_base_seed must be set when exclude_neuron_n is not 0"
-        data_key = data_dir.split("static")[-1].split(".")[0].replace("preproc", "").replace("_nobehavior", "")
+        self.data_key = data_dir.split("static")[-1].split(".")[0].replace("preproc", "").replace("_nobehavior", "")
 
         assert (
             include_behavior and select_input_channel
@@ -263,12 +303,22 @@ class LurzDataModule(pl.LightningDataModule):
     def get_mean(self):
         """ Computes the mean response of the train dataset """
 
+        mean_path = pathlib.Path(self.data_dir + "/mean.npy")
+
+        if mean_path.exists():
+            mean = np.load(mean_path)
+            print("Loaded precomputed mean from " + str(mean_path))
+            return torch.from_numpy(mean)
+
         dataloader = DataLoader(self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size)
         summed = torch.zeros(self.get_output_shape())
         for d in dataloader:
             summed += torch.sum(d.responses, 0)
 
         mean = summed / self.train_len()
+
+        np.save(mean_path, mean)
+        print("Created mean array to " + str(mean_path))
         return mean
     
     def train_len(self):
@@ -316,6 +366,93 @@ class LurzDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+
+    def get_oracle_dataloader(self, toy_data=False, oracle_condition=None, verbose=False):
+
+        if toy_data:
+            condition_hashes = self.dat.info.condition_hash
+        else:
+            dat_info = self.dat.trial_info
+            if "image_id" in dir(dat_info):
+                condition_hashes = dat_info.image_id
+                image_class = dat_info.image_class
+
+            elif "colorframeprojector_image_id" in dir(dat_info):
+                condition_hashes = dat_info.colorframeprojector_image_id
+                image_class = dat_info.colorframeprojector_image_class
+            elif "frame_image_id" in dir(dat_info):
+                condition_hashes = dat_info.frame_image_id
+                image_class = dat_info.frame_image_class
+            else:
+                raise ValueError(
+                    "'image_id' 'colorframeprojector_image_id', or 'frame_image_id' have to present in the dataset under dat.info "
+                    "in order to load get the oracle repeats."
+                )
+
+        max_idx = condition_hashes.max() + 1
+        classes, class_idx = np.unique(image_class, return_inverse=True)
+        identifiers = condition_hashes + class_idx * max_idx
+
+        dat_tiers = self.dat.trial_info.tiers
+        sampling_condition = (
+            np.where(dat_tiers == "test")[0]
+            if oracle_condition is None
+            else np.where((dat_tiers == "test") & (class_idx == oracle_condition))[0]
+        )
+        if (oracle_condition is not None) and verbose:
+            print("Created Testloader for image class {}".format(classes[oracle_condition]))
+
+        sampler = RepeatsBatchSampler(identifiers, sampling_condition)
+        return DataLoader(self.dat, batch_sampler=sampler)
+
+    
+    def get_correlations(self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs):
+        correlations = {}
+        for k, v in dataloaders.items():
+            target, output = self.model_predictions(dataloader=v, model=model, data_key=k)
+            correlations[k] = corr(target, output, axis=0, eps=1e-12)
+
+            if np.any(np.isnan(correlations[k])):
+                print("{}% NaNs , NaNs will be set to Zero.".format(np.isnan(correlations[k]).mean() * 100))
+            correlations[k][np.isnan(correlations[k])] = 0
+
+        if not as_dict:
+            correlations = (
+                np.hstack([v for v in correlations.values()])
+                if per_neuron
+                else np.mean(np.hstack([v for v in correlations.values()]))
+            )
+        return correlations
+
+    
+    def model_predictions(self, model, dataloader, data_key):
+        """
+        computes model predictions for a given dataloader and a model
+        Returns:
+            target: ground truth, i.e. neuronal firing rates of the neurons
+            output: responses as predicted by the network
+        """
+
+        target, output = torch.empty(0), torch.empty(0)
+        for images, responses in dataloader:
+            # returns in batches.. for example images.shape = [10, 1, 36, 64]
+            if len(images.shape) == 5:
+                images = images.squeeze(dim=0)
+                responses = responses.squeeze(dim=0)
+            with torch.no_grad():
+                # the outputs and targets get concatenated into a veeeery long tensor
+                output = torch.cat((output, (model(images).detach().cpu())), dim=0)
+                target = torch.cat((target, responses.detach().cpu()), dim=0)
+        
+        # on oracle dataloader returns both of shape (999, 5335), because 999 is test_len and 5335 is number_of_neurons
+        # or for dm.val_dataloader() returns (522, 5335), where 522 is dm.val_len()
+        return target.numpy(), output.numpy()
+
+
+    def return_test_sampler(self, oracle_condition=None, get_key=False):
+        print("Returning only test sampler with repeats...")
+        dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
+        return (self.data_key, {"test": dataloader}) if get_key else {"test": dataloader}
 
     def predict_dataloader(self):
         # TODO: return some separate subset for prediction and not only test
