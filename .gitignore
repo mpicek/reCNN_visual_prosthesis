@@ -130,3 +130,6 @@ dmypy.json
 
 data/
 wandb/
+lightning_logs/
+metacentrum/qsub_script.e*
+metacentrum/qsub_script.o*
