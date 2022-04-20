@@ -13,6 +13,7 @@ import pytorch_lightning as pl
 
 from pprint import pprint
 
+
 def get_best_model(wandb_run, model_class=Picek, model_artifact_name="RotEq_FullGaussian2d"):
 
 
@@ -26,8 +27,69 @@ def get_best_model(wandb_run, model_class=Picek, model_artifact_name="RotEq_Full
 
     return best_model
 
+
+def Lurz_dataset_preparation_function(config):
+    """
+        Gets config, can edit it.
+        Returns Pytorch Lightning DataModule
+    """
+    # setup datamodule - use artifact
+    # dataset_artifact = run.use_artifact(dataset_artifact_name)
+    # data_dir = dataset_artifact.download()
+    data_dir = 'data/lurz2020/static20457-5-9-preproc0'
+
+    #TODO: add artifact
+    dataset_config = {"data_dir": data_dir, 
+                      "batch_size": config["batch_size"], 
+                      "normalize": True, 
+                      "exclude": "images"}
+
+
+    dm = LurzDataModule(**dataset_config)
+    dm.prepare_data()
+    dm.setup()
+
+    # update config for initialization of model (<- certain config parameters depend on data)
+    config.update(
+        {
+            "input_channels": dm.get_input_shape()[0],
+            "input_size_x": dm.get_input_shape()[1],
+            "input_size_y": dm.get_input_shape()[2],
+            "num_neurons": dm.get_output_shape()[0],
+            "mean_activity": dm.get_mean(), #dm.output_shape.mean(dim=0), TODO: spocitat.. trva
+        }
+    )
+
+    return dm
+
+
+def Antolik_dataset_preparation_function(config):
+    """
+        Gets config, can edit it.
+        Returns Pytorch Lightning DataModule
+    """
+
+    dm = Antolik2016Datamodule(
+        region=config["region"], batch_size=config["batch_size"], with_test_dataset=False
+    )
+    dm.setup()
+
+    config.update(
+        {
+            "input_channels": dm.train_dataset[:][0].shape[1],
+            "input_size_x": dm.train_dataset[:][0].shape[2],
+            "input_size_y": dm.train_dataset[:][0].shape[3],
+            "num_neurons": dm.train_dataset[:][1].shape[1],
+            "mean_activity": dm.train_dataset[:][1].mean(dim=0),
+        }
+    )
+
+    return dm
+
+
 def run_wandb_training(
         config,
+        dataset_preparation_function,
         entity, 
         project,
         model_artifact_name = None,
@@ -49,63 +111,16 @@ def run_wandb_training(
         entity=entity,
     )
 
-    # define a metric we are interested in the maximum of
-
     # Access all hyperparameter values through wandb.config
     config = dict(wandb.config)
-    # config["lr"] = 0.0001
-
     pprint(config)
 
-    # setup datamodule - use artifact
-    # dataset_artifact = run.use_artifact(dataset_artifact_name)
-    # data_dir = dataset_artifact.download()
-    data_dir = 'data/lurz2020/static20457-5-9-preproc0'
-
-    #TODO: add artifact
-    dataset_config = {"data_dir": data_dir, 
-                      "batch_size": config["batch_size"], 
-                      "normalize": True, 
-                      "exclude": "images"}
-
-    # dm = Antolik2016Datamodule(
-    #     region=config["region"], batch_size=config["batch_size"], with_test_dataset=False
-    # )
-    # dm.setup()
-
-    dm = LurzDataModule(**dataset_config)
-    dm.prepare_data()
-    dm.setup()
-
-    # update config for initialization of model (<- certain config parameters depend on data)
-    config.update(
-        {
-            "input_channels": dm.get_input_shape()[0],
-            "input_size_x": dm.get_input_shape()[1],
-            "input_size_y": dm.get_input_shape()[2],
-            "num_neurons": dm.get_output_shape()[0],
-            # "mean_activity": torch.zeros(dm.get_output_shape()), #dm.output_shape.mean(dim=0), TODO: spocitat.. trva
-            # "mean_activity": dm.get_mean_fast(), #dm.output_shape.mean(dim=0), TODO: spocitat.. trva
-            "mean_activity": dm.get_mean(), #dm.output_shape.mean(dim=0), TODO: spocitat.. trva
-        }
-    )
-
-    # config.update(
-    #     {
-    #         "input_channels": dm.train_dataset[:][0].shape[1],
-    #         "input_size_x": dm.train_dataset[:][0].shape[2],
-    #         "input_size_y": dm.train_dataset[:][0].shape[3],
-    #         "num_neurons": dm.train_dataset[:][1].shape[1],
-    #         "mean_activity": dm.train_dataset[:][1].mean(dim=0),
-    #     }
-    # )
-
-    
+    dm = dataset_preparation_function(config)
 
     # Set up model
     model = model_class(**config)
+
     # summary(model, torch.zeros((config["batch_size"], dm.get_input_shape()[0], dm.get_input_shape()[1], dm.get_input_shape()[2])))
-    
 
     # setup wandb logger
     wandb_logger = WandbLogger(log_model=True)
@@ -172,7 +187,7 @@ def run_wandb_training(
 
     print(checkpoint_callback.best_model_path)
 
-    return model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
+    model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
 
     if config["test"]:
         best_model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
@@ -187,3 +202,5 @@ def run_wandb_training(
         result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
             metadata=results[0])
         run.log_artifact(result_artifact)
+    
+    return model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
