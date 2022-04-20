@@ -6,7 +6,7 @@
 
 # DEFINE RESOURCES:
 #PBS -N qsub_script
-#PBS -l select=1:ncpus=4:ngpus=1:mem=32gb:scratch_local=40gb
+#PBS -l select=1:ncpus=8:ngpus=1:mem=20gb:scratch_local=100gb:gpu_cap=^cuda80
 #PBS -q gpu
 #PBS -l walltime=8:00:00
 
@@ -25,6 +25,16 @@ export SINGULARITY_TMPDIR=$SCRATCHDIR/tmp
 cd $SCRATCHDIR
 
 # Create a script that will be run in a NGC container with Singularity
+
+if [[ -v WANDB_API_KEY ]];
+then
+    echo "SET"
+    echo "export WANDB_API_KEY=$WANDB_API_KEY" > my_new_script.sh
+    echo "export WANDB_API_KEY=$WANDB_API_KEY"
+else
+    echo "NOT SET"
+fi
+
 echo "source activate csng-dl" > my_new_script.sh
 echo "cd /storage/budejovice1/home/mpicek/reCNN_visual_prosthesis" >> my_new_script.sh
 echo "$CMD" >> my_new_script.sh
