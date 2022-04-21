@@ -187,20 +187,13 @@ def run_wandb_training(
 
     print(checkpoint_callback.best_model_path)
 
-    model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
+    model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
 
     if config["test"]:
-        best_model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
-        # test on the best model at all
-        results = trainer.test(model=best_model, dataloaders=dm.test_dataloader())
-
-        print(results)
-        print("--------------")
-        for x in results:
-            print(x)
+        dm.model_performances(model, trainer)
         
-        result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
-            metadata=results[0])
-        run.log_artifact(result_artifact)
+        # result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
+        #     metadata=results[0])
+        # run.log_artifact(result_artifact)
     
-    return model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
+    return model
