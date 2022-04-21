@@ -58,8 +58,8 @@ class RepeatsBatchSampler(Sampler):
         """
         if subset_index is None:
             subset_index = np.arange(len(keys))
-        _, inv = np.unique(keys[subset_index], return_inverse=True)
-        self.repeat_index = np.unique(inv)
+        _, inv = np.unique(keys[subset_index], return_inverse=True) # assigns a batch to each trial
+        self.repeat_index = np.unique(inv) # on which index we are at
         self.repeat_sets = inv
         self.subset_index = subset_index
         self.batch_size = 10
@@ -376,11 +376,11 @@ class LurzDataModule(pl.LightningDataModule):
             if "image_id" in dir(dat_info):
                 condition_hashes = dat_info.image_id
                 image_class = dat_info.image_class
-
             elif "colorframeprojector_image_id" in dir(dat_info):
                 condition_hashes = dat_info.colorframeprojector_image_id
                 image_class = dat_info.colorframeprojector_image_class
             elif "frame_image_id" in dir(dat_info):
+                # gets here in this if else tree
                 condition_hashes = dat_info.frame_image_id
                 image_class = dat_info.frame_image_class
             else:
@@ -401,6 +401,9 @@ class LurzDataModule(pl.LightningDataModule):
         )
         if (oracle_condition is not None) and verbose:
             print("Created Testloader for image class {}".format(classes[oracle_condition]))
+
+
+        # IDENTIFIERS ARE WHERE THINGS ARE NOT UNIQUE
 
         sampler = RepeatsBatchSampler(identifiers, sampling_condition)
         return DataLoader(self.dat, batch_sampler=sampler)
@@ -458,9 +461,22 @@ class LurzDataModule(pl.LightningDataModule):
         # TODO: return some separate subset for prediction and not only test
         return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
     
-    def model_performances(self, model=None):
-        test = self.test_dataloader()
-        #TODO
-        for d in tqdm(test):
-            pprint(d)
+    def model_performances(self, model=None, trainer=None):
+        # test = self.test_dataloader()
+        model.test_average_batch = False
+        val_score = trainer.test(model, self.val_dataloader())
+        test_score = trainer.test(model, self.test_dataloader())
+
+        model.test_average_batch = True
+        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader())
+        
+        from pprint import pprint
+        print("val_score")
+        pprint(val_score)
+        print("test_score")
+        pprint(test_score)
+        print("test_repeats_averaged_score")
+        pprint(test_repeats_averaged_score)
+        # for d in tqdm(test):
+        #     pprint(d)
 
