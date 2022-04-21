@@ -1,17 +1,12 @@
 from predict_neural_responses.models import *
-from pytorch_lightning.callbacks import EarlyStopping
 import pytorch_lightning as pl
 import predict_neural_responses.dnn_blocks.dnn_blocks as bl
 
-
-
-import warnings
 from collections import OrderedDict, Iterable
 from functools import partial
 
 from torch import nn
 import torch
-import torchvision
 
 from neuralpredictors.layers.cores.base import Core
 from neuralpredictors.layers.cores.conv2d import Stacked2dCore
@@ -27,12 +22,114 @@ from neuralpredictors.layers.hermite import (
     RotationEquivariantBias2DLayer,
     RotationEquivariantScale2DLayer,
 )
+from neuralpredictors.measures.np_functions import corr as corr_from_neuralpredictors
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-class Picek(encoding_model):
+
+class encoding_model_fixed(encoding_model):
+    """Parent class for system identification enconding models, keeps track of useful metrics"""
+
+    def __init__(self, **config):
+        super().__init__()
+        self.config = config
+        self.test_average_batch = config["test_average_batch"]
+        self.loss = PoissonLoss(avg=True)
+        self.corr = Corr()
+        self.save_hyperparameters()
+
+    def regularization(self):
+        return 0
+
+    def training_step(self, batch, batch_idx):
+        img, resp = batch
+        prediction = self.forward(img)
+        loss = self.loss(prediction, resp)
+        reg_term = self.regularization()
+        regularized_loss = loss + reg_term
+        self.log("train/unregularized_loss", loss)
+        self.log("train/regularization", reg_term)
+        self.log("train/regularized_loss", regularized_loss)
+        return regularized_loss
+
+    def validation_step(self, batch, batch_idx):
+        """
+            - We just get prediction and return them with target. Later in validation_epoch_end,
+                we compute the correlation on the whole validation set (and not on separate
+                batches with final averaging)
+        """
+
+        img, resp = batch
+        prediction = self.forward(img)
+        loss = self.loss(prediction, resp)
+        self.log("val/loss", loss)
+
+        return prediction, resp
+
+
+    def test_step(self, batch, batch_idx):
+        """
+            - If self.test_average_batch == True, then we average the responses of
+                the batch (because it is the same image shown multiple times to cancel
+                out the noise)
+
+            - We just get prediction and return them with target. Later in validation_epoch_end,
+                we compute the correlation on the whole validation set (and not on separate
+                batches with final averaging).
+        """
+
+        img, resp = batch
+
+        if self.test_average_batch:
+            # I take only one image as all images are the same (it is a repeated trial)
+            # .unsqueeze(0) adds one dimension at the beginning (because I need
+            # to create a batch of size 1)
+            img = img[0].unsqueeze(0)
+            resp = resp.mean(0).unsqueeze(0)
+
+        prediction = self.forward(img)
+        return prediction, resp
+
+    def configure_optimizers(self):
+        opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
+        return opt
+    
+    def test_epoch_end(self, test_outs):
+        """
+            We compute the correlation on the whole set. Predictions with target
+            responses are in test_outs (= what each test_step() returned)
+        """
+        pred = []
+        resp = []
+        for (p, r) in test_outs:
+            pred.append(p.detach().cpu().numpy())
+            resp.append(r.detach().cpu().numpy())
+        
+        predictions = np.concatenate(pred)
+        responses = np.concatenate(resp)
+        correlation = corr_from_neuralpredictors(predictions, responses)
+        self.log("test/corr", np.mean(correlation))
+    
+    def validation_epoch_end(self, val_outs):
+        """
+            We compute the correlation on the whole set. Predictions with target
+            responses are in val_outs (= what each val_step() returned)
+        """
+        pred = []
+        resp = []
+        for (p, r) in val_outs:
+            pred.append(p.detach().cpu().numpy())
+            resp.append(r.detach().cpu().numpy())
+        
+        predictions = np.concatenate(pred)
+        responses = np.concatenate(resp)
+        correlation = corr_from_neuralpredictors(predictions, responses)
+        self.log("val/corr", np.mean(correlation))
+
+
+class Picek(encoding_model_fixed):
     """My model with FullFactorized2d readout"""
 
     def __init__(self, **config):
@@ -136,7 +233,7 @@ class Picek(encoding_model):
         self.log("reg/readout_reg", readout_l1_reg)
         return reg_term
 
-class PicekGauss(encoding_model):
+class PicekGauss(encoding_model_fixed):
     """My model with Gaussian readout"""
 
     def __init__(self, **config):
@@ -247,7 +344,7 @@ class PicekGauss(encoding_model):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
-class LurzRotEq(encoding_model):
+class LurzRotEq(encoding_model_fixed):
     """Lurz's model with RotEq core"""
 
     def __init__(self, **config):
@@ -360,7 +457,7 @@ class LurzRotEq(encoding_model):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
-class LurzGauss(encoding_model):
+class LurzGauss(encoding_model_fixed):
     """Lurz's model"""
 
     def __init__(self, **config):
@@ -484,24 +581,16 @@ class LurzGauss(encoding_model):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
-
-class Lurz(encoding_model):
+class Lurz(encoding_model_fixed):
     """Lurz's model"""
 
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
-        # self.loss = PoissonLoss(avg=True)
-        # self.corr = Corr()
         self.nonlinearity = self.config["nonlinearity"]
-        
 
         self.core = cores.SE2dCore(
-            # num_rotations=self.config["num_rotations"],
             stride=self.config["stride"],
-            # upsampling=self.config["upsampling"],
-            # rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-
 
             input_regularizer=self.config["input_regularizer"],
 
@@ -521,12 +610,10 @@ class Lurz(encoding_model):
             depth_separable=config["depth_separable"],
             use_avg_reg=config["use_avg_reg"]
         )
-
         
 
         self.readout = readouts.FullFactorized2d(
             in_shape=( #TODO: stack???
-                #TODO: ten shape si potvrdit
                 self.config["core_hidden_channels"] * abs(self.config["stack"]),
                 self.config["input_size_x"], # ocividne se to padduje, takze to neztraci rozmery
                 self.config["input_size_y"],
@@ -611,7 +698,7 @@ class Lurz(encoding_model):
 
 
 
-class HelloWorld(encoding_model):
+class HelloWorld(encoding_model_fixed):
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
