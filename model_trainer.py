@@ -28,15 +28,17 @@ def get_best_model(wandb_run, model_class=Picek, model_artifact_name="RotEq_Full
     return best_model
 
 
-def Lurz_dataset_preparation_function(config):
+def Lurz_dataset_preparation_function(config, run=None):
     """
         Gets config, can edit it.
         Returns Pytorch Lightning DataModule
     """
     # setup datamodule - use artifact
-    # dataset_artifact = run.use_artifact(dataset_artifact_name)
-    # data_dir = dataset_artifact.download()
     data_dir = 'data/lurz2020/static20457-5-9-preproc0'
+    
+    if run is not None:
+        dataset_artifact = run.use_artifact(config["dataset_artifact_name"])
+        data_dir = dataset_artifact.download()
 
     #TODO: add artifact
     dataset_config = {"data_dir": data_dir, 
@@ -63,11 +65,14 @@ def Lurz_dataset_preparation_function(config):
     return dm
 
 
-def Antolik_dataset_preparation_function(config):
+def Antolik_dataset_preparation_function(config, run=None):
     """
         Gets config, can edit it.
         Returns Pytorch Lightning DataModule
     """
+
+    if run is not None:
+        raise NotImplementedError()
 
     dm = Antolik2016Datamodule(
         region=config["region"], batch_size=config["batch_size"], with_test_dataset=False
@@ -92,8 +97,7 @@ def run_wandb_training(
         dataset_preparation_function,
         entity, 
         project,
-        model_artifact_name = None,
-        dataset_artifact_name="Lurz_dataset:latest", 
+        model_artifact_name = None, 
         model_class=Picek, 
         early_stopping_monitor="val/corr", 
         early_stopping_mode="max", 
@@ -115,7 +119,7 @@ def run_wandb_training(
     config = dict(wandb.config)
     pprint(config)
 
-    dm = dataset_preparation_function(config)
+    dm = dataset_preparation_function(config, run)
 
     # Set up model
     model = model_class(**config)

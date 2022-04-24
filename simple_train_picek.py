@@ -48,13 +48,17 @@ config = {
     "reg_spatial_sparsity": 0.45,
 
     # TRAINER
-    "patience": 7,
-    "train_on_val": True, # in case you want to quickly check that your model "compiles" correctly
+    "patience": 10,
+    "train_on_val": False, # in case you want to quickly check that your model "compiles" correctly
     "test": True,
     "observed_val_metric": "val/corr",
 
+    "test_average_batch": False,
+
     # ANTOLIK
     "region": "region1",
+
+    "dataset_artifact_name": "Lurz_dataset:latest",
 }
 
 
@@ -77,7 +81,7 @@ def main():
 
     #TODO: input_channels = 1???????????
 
-    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, dataset_artifact_name="Lurz_dataset:latest", model_class=Lurz)
+    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, model_class=LurzRotEq)
     return model
     
 

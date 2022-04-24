@@ -376,8 +376,8 @@ class LurzRotEq(encoding_model_fixed):
             in_shape=( #TODO: stack???
                 #TODO: ten shape si potvrdit
                 self.config["core_hidden_channels"] * self.config["num_rotations"] * abs(self.config["stack"]),
-                self.config["input_size_x"], # ocividne se to padduje, takze to neztraci rozmery
-                self.config["input_size_y"],
+                self.config["input_size_x"] * self.config["upsampling"], # ocividne se to padduje, takze to neztraci rozmery
+                self.config["input_size_y"] * self.config["upsampling"],
             ),
             outdims=self.config["num_neurons"],
             bias=self.config["readout_bias"],
