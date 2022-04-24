@@ -7,7 +7,9 @@ To clone the repository:
 git clone --recurse-submodules git@github.com:mpicek/reCNN_visual_prosthesis.git
 ```
 
-## Running a network
+Bachelor thesis is in [this github repo](https://github.com/mpicek/bachelor_thesis).
+
+## Running the network
 
 Use a Docker image from [this repository](https://github.com/mpicek/csng_dl_docker_image).
 It can be obtainde from the Docker Hub [here](https://hub.docker.com/repository/docker/picekma/csng_docker_dl/general) - more on instalation in the previous repository.
@@ -54,5 +56,3 @@ command.
 ```bash
 python3 ./run_commands.py --command_file=cmd --script=qsub_script.sh --wandb_api_key --num_of_command_repetitions=3
 ```
-
-
