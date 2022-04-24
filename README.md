@@ -21,7 +21,7 @@ docker run --gpus all -it --rm -v local_dir:$(pwd) picekma/csng_docker_dl:0.1
 Or on MetaCentrum:
 ```
 singularity shell --nv -B $SCRATCHDIR /storage/brno2/home/mpicek/csng_dl_docker_image/image.img
-```,
+```
 where you have to specify your path to a builded Singularity container. The build is
 described in the repository with the Docker file.
 
