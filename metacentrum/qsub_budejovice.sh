@@ -11,7 +11,7 @@
 #PBS -l walltime=10:00:00
 
 # Directory I use as a main storage
-DATADIR="/storage/brno2/home/$(whoami)"
+DATADIR="/storage/budejovice1/home/$(whoami)"
 
 # test if scratch directory is set
 test -n "$SCRATCHDIR" || { echo >&2 "Variable SCRATCHDIR is not set!"; exit 1; }
@@ -36,11 +36,11 @@ else
 fi
 
 echo "source activate csng-dl" > my_new_script.sh
-echo "cd /storage/brno2/home/mpicek/reCNN_visual_prosthesis" >> my_new_script.sh
+echo "cd /storage/budejovice1/home/mpicek/reCNN_visual_prosthesis" >> my_new_script.sh
 echo "$CMD" >> my_new_script.sh
 
 # --nv for gpu, bind scratch directory
-singularity exec --nv -B $SCRATCHDIR /storage/brno2/home/mpicek/csng_dl_docker_image/image.img bash my_new_script.sh
+singularity exec --nv -B $SCRATCHDIR /storage/budejovice1/home/mpicek/csng_dl_docker_image/image.img bash my_new_script.sh
 
 # print what command has been run and print the output of the program
 echo "$CMD"
