@@ -553,26 +553,15 @@ class LurzGauss(encoding_model_fixed):
         
 
         self.core = cores.SE2dCore(
-            # num_rotations=self.config["num_rotations"],
             stride=self.config["stride"],
-            # upsampling=self.config["upsampling"],
-            # rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-
-
             input_regularizer=self.config["input_regularizer"],
-
-
             input_channels=self.config["input_channels"],
             hidden_channels=self.config["core_hidden_channels"],
             input_kern=self.config["core_input_kern"],
             hidden_kern=self.config["core_hidden_kern"],
-
-
             layers=self.config["core_layers"],
-
             gamma_input=config["core_gamma_input"], # 0
             gamma_hidden=config["core_gamma_hidden"], # 0
-            
             stack=config["stack"],
             depth_separable=config["depth_separable"],
             use_avg_reg=config["use_avg_reg"]
@@ -592,7 +581,6 @@ class LurzGauss(encoding_model_fixed):
             feature_reg_weight=self.config["readout_gamma"],
         )
 
-
         self.register_buffer("laplace", torch.from_numpy(laplace()))
         self.nonlin = bl.act_func()[config["nonlinearity"]]
 
@@ -602,29 +590,8 @@ class LurzGauss(encoding_model_fixed):
         return x
     
     def __str__(self):
-        return "Lurz_FullGaussian"
+        return "StackedCore_FullGaussian2d"
     
-    def reg_readout_spatial_smoothness(self):
-        nw = self.readout.features
-        reg_term = torch.sqrt(
-            torch.sum(
-                torch.pow(
-                    nn.functional.conv2d(
-                        nw.reshape(
-                            self.config["num_neurons"],
-                            1,
-                            self.config["input_size_x"],
-                            self.config["input_size_y"],
-                        ),
-                        self.laplace,
-                        padding="same",
-                    ),
-                    2,
-                )
-            )
-        )
-        reg_term = self.config["reg_readout_spatial_smoothness"] * reg_term
-        return reg_term
 
     def reg_readout_group_sparsity(self):
         nw = self.readout.features.reshape(self.config["num_neurons"], -1)
@@ -633,37 +600,18 @@ class LurzGauss(encoding_model_fixed):
         )
         return reg_term
 
-    def reg_readout_spatial_sparsity(self):
-        # is this already enforced somehow?
-        nw = self.readout.features
-        reg_term = self.config["reg_spatial_sparsity"] * torch.abs(nw).mean()
-        self.log("reg/readout_spatial_sparsity", reg_term)
-        return reg_term
-
     def regularization(self):
 
         readout_l1_reg = self.readout.regularizer(reduction="mean")
         self.log("reg/readout_l1_reg", readout_l1_reg)
-        # spatial_smoothness = self.reg_readout_spatial_smoothness()
-        spatial_smoothness = 0
-        group_sparsity = self.reg_readout_group_sparsity()
-        spatial_sparsity = self.reg_readout_spatial_sparsity()
-        self.log("reg/readout_spatial_smoothness", spatial_smoothness)
-        self.log("reg/readout_group_sparsity", group_sparsity)
-        self.log("reg/readout_spatial_sparsity", spatial_sparsity)
 
-        readout_reg = readout_l1_reg + spatial_smoothness + group_sparsity + spatial_sparsity
-        # for k in self.config.keys():
-        #     # print(k)
-        #     if k.startswith("reg_readout"):
-        #         kreg = getattr(self, k)()
-        #         readout_reg = readout_reg + kreg
-        # core
+        readout_reg = readout_l1_reg
         core_reg = self.core.regularizer()
         reg_term = readout_reg + core_reg
         self.log("reg/core reg", core_reg)
         self.log("reg/readout_reg", readout_reg)
         return reg_term
+
 
 class Lurz(encoding_model_fixed):
     """Lurz's model"""

@@ -12,17 +12,17 @@ model = None
 
 config = {
     # GENERAL
-    "seed": 42,
+    "seed": 24,
     "data_name": "PicekModel",
     "batch_size": 10,
     "lr": 0.001,
     "max_epochs": 500,
 
     # CORE GENERAL CONFIG
-    "core_hidden_channels": 64,
+    "core_hidden_channels": 32,
     "core_layers": 5,
     "core_input_kern": 3,
-    "core_hidden_kern": 3,
+    "core_hidden_kern": 7,
 
     # ROTATION EQUIVARIANCE CORE CONFIG
     "num_rotations": 16,       
@@ -37,9 +37,9 @@ config = {
     "nonlinearity": "softplus",
     
     # REGULARIZATION
-    "core_gamma_input": 0.1,
-    "core_gamma_hidden": 52,
-    "readout_gamma": 0.17,
+    "core_gamma_input": 0.019006105312275375,
+    "core_gamma_hidden": 0.010224059363842318,
+    "readout_gamma": 0.0001391583160413704,
     "input_regularizer": "LaplaceL2norm", # for RotEqCore - default 
     "use_avg_reg": True,
 
@@ -48,7 +48,7 @@ config = {
     "reg_spatial_sparsity": 0.45,
 
     # TRAINER
-    "patience": 10,
+    "patience": 15,
     "train_on_val": False, # in case you want to quickly check that your model "compiles" correctly
     "test": True,
     "observed_val_metric": "val/corr",
