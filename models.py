@@ -567,7 +567,6 @@ class LurzRotEq(encoding_model_fixed):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
-
 class LurzRotEqGauss(encoding_model_fixed):
     """Lurz's model with RotEq core"""
 
@@ -651,7 +650,7 @@ class LurzRotEqGauss(encoding_model_fixed):
         return reg_term
 
 class RotEqBottleneckGauss(encoding_model_fixed):
-    """Lurz's model with RotEq core"""
+    """Lurz's model with RotEq core, bottleneck at the end and also a gauss readout"""
 
     def __init__(self, **config):
         super().__init__(**config)
@@ -748,7 +747,11 @@ class RotEqBottleneckGauss(encoding_model_fixed):
         return reg_term
 
 class RotEqBottleneckTest_NoGauss(encoding_model_fixed):
-    """Lurz's model with RotEq core"""
+    """
+    Lurz's model with RotEq core and with bottleneck
+    No Readout is present here. It is used to test that the features are
+        really rotation equivariant (in bottleneck_test.py)
+    """
 
     def __init__(self, **config):
         super().__init__(**config)
@@ -786,28 +789,6 @@ class RotEqBottleneckTest_NoGauss(encoding_model_fixed):
     
     def __str__(self):
         return "RotEqBottleneckTest_NoGauss"
-    
-    def add_bottleneck(self):
-
-        layer = OrderedDict()
-
-        if self.hidden_padding is None:
-            self.hidden_padding = self.bottleneck_kernel // 2
-
-        layer["hermite_conv"] = HermiteConv2D(
-            input_features=self.config["hidden_channels"] * self.config["num_rotations"],
-            output_features=1,
-            num_rotations=self.config["num_rotations"],
-            upsampling=self.config["upsampling"],
-            filter_size=self.config["bottleneck_kernel"],
-            stride=self.config["stride"],
-            padding=self.hidden_padding,
-            first_layer=False,
-        )
-        super().add_bn_layer(layer)
-        super().add_activation(layer)
-        super().features.add_module("bottleneck", nn.Sequential(layer))
-    
 
     def regularization(self):
 
@@ -1016,16 +997,16 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         upsampling=2,
         rot_eq_batch_norm=True,
         input_regularizer="LaplaceL2norm",
-        bottleneck_kernel=3,
-        bottleneck_padding=None,
+        bottleneck_kernel=3,  # added
+        bottleneck_padding=None, # added
         **kwargs,
     ):
         self.num_rotations = num_rotations
         self.stride = stride
         self.upsampling = upsampling
         self.rot_eq_batch_norm = rot_eq_batch_norm
-        self.bottleneck_kernel = bottleneck_kernel
-        self.bottleneck_padding = bottleneck_padding
+        self.bottleneck_kernel = bottleneck_kernel # added
+        self.bottleneck_padding = bottleneck_padding # added
         super().__init__(*args,
             **kwargs, input_regularizer=input_regularizer)
 
@@ -1054,32 +1035,8 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         self.add_bn_layer(layer)
         self.add_activation(layer)
         self.features.add_module("layer0", nn.Sequential(layer))
-
-    # def add_subsequent_layers(self):
-    #     if not isinstance(self.hidden_kern, Iterable):
-    #         self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
-
-    #     for l in range(1, self.num_layers):
-    #         layer = OrderedDict()
-
-    #         if self.hidden_padding is None:
-    #             self.hidden_padding = self.hidden_kern[l - 1] // 2
-
-    #         layer["hermite_conv"] = HermiteConv2D(
-    #             input_features=self.hidden_channels * self.num_rotations,
-    #             output_features=self.hidden_channels,
-    #             num_rotations=self.num_rotations,
-    #             upsampling=self.upsampling,
-    #             filter_size=self.hidden_kern[l - 1],
-    #             stride=self.stride,
-    #             padding=self.hidden_padding,
-    #             first_layer=False,
-    #         )
-    #         self.add_bn_layer(layer)
-    #         self.add_activation(layer)
-    #         self.features.add_module("layer{}".format(l), nn.Sequential(layer))
     
-    def add_bottleneck_bn_layer(self, layer):
+    def add_bottleneck_bn_layer(self, layer): # added
         """
         Same as add_bn_layer(), but self.hidden_channels are replaced by 1
         """
@@ -1096,9 +1053,9 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
                 elif self.batch_norm_scale:
                     layer["scale"] = self.scale_layer_cls(1)
 
-    def add_bottleneck_layer(self):
+    def add_bottleneck_layer(self): # added
         """
-        Adds the bottleneck layer
+        Adds the bottleneck layer (into self.features)
         """
 
         layer = OrderedDict()
@@ -1120,8 +1077,21 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         self.add_bottleneck_bn_layer(layer)  # add the bottleneck bn_layer
         self.add_activation(layer)
         self.features.add_module("bottleneck_layer", nn.Sequential(layer))
+    
+    def add_activation(self, layer):
+        """
+        Overwritten only one line. Original:
+            if len(self.features) < self.num_layers - 1 or self.final_nonlinearity:
+        Now:
+            if len(self.features) < self.num_layers or self.final_nonlinearity:
+        """
 
-    def add_subsequent_layers(self):
+        if self.linear:
+            return
+        if len(self.features) < self.num_layers or self.final_nonlinearity:
+            layer["nonlin"] = AdaptiveELU(self.elu_xshift, self.elu_yshift)
+
+    def add_subsequent_layers(self): # edited
         if not isinstance(self.hidden_kern, Iterable):
             self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
 
@@ -1146,7 +1116,7 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
             self.features.add_module("layer{}".format(l), nn.Sequential(layer))
         
         # at the end, add also the bottleneck layer
-        self.add_bottleneck_layer()
+        self.add_bottleneck_layer() # added
     
     def forward(self, input_):
         # print("FORWARD")
@@ -1154,7 +1124,10 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         # print(input_.shape)
 
         for l, feat in enumerate(self.features):
+            # goes also through the bottleneck (it is added into the features)
             input_ = feat(input_)
+
+
             # if num_of_layers-1 == l:
                 # print("last layer")
             # print(input_.shape)
@@ -1171,13 +1144,6 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         if isinstance(m, HermiteConv2D):
             nn.init.normal_(m.coeffs.data, std=0.1)
 
-    # def forward(self, input_):
-    #     ret = []
-    #     for l, feat in enumerate(self.features):
-    #         input_ = feat(input_)
-    #         ret.append(input_)
-
-    #     return torch.cat([ret[ind] for ind in self.stack], dim=1)
 
     def laplace(self):
         return self._input_weights_regularizer(self.features[0].hermite_conv.weights_all_rotations, avg=self.use_avg_reg)
@@ -1200,314 +1166,6 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         return self.group_sparsity() * self.gamma_hidden + self.gamma_input * self.laplace()
 
     @property
-    def outchannels(self):
-        return len(self.features) * self.hidden_channels * self.num_rotations
-
-
-class RotationEquivariant2dCoreBottleneckUltrasparse(Stacked2dCore, nn.Module):
-    """
-    A core built of 2d rotation-equivariant layers. For more info refer to https://openreview.net/forum?id=H1fU8iAqKX.
-    """
-
-    def __init__(
-        self,
-        *args,
-        num_rotations=8,
-        stride=1,
-        upsampling=2,
-        rot_eq_batch_norm=True,
-        input_regularizer="LaplaceL2norm",
-        bottleneck_kernel=3,
-        bottleneck_padding=None,
-        **kwargs,
-    ):
-        self.num_rotations = num_rotations
-        self.stride = stride
-        self.upsampling = upsampling
-        self.rot_eq_batch_norm = rot_eq_batch_norm
-        self.bottleneck_kernel = bottleneck_kernel
-        self.bottleneck_padding = bottleneck_padding
-        super().__init__(*args,
-            **kwargs, input_regularizer=input_regularizer)
-
-    def set_batchnorm_type(self):
-        if not self.rot_eq_batch_norm:
-            self.batchnorm_layer_cls = nn.BatchNorm2d
-            self.bias_layer_cls = Bias2DLayer
-            self.scale_layer_cls = Scale2DLayer
-        else:
-            self.batchnorm_layer_cls = partial(RotationEquivariantBatchNorm2D, num_rotations=self.num_rotations)
-            self.bias_layer_cls = partial(RotationEquivariantBias2DLayer, num_rotations=self.num_rotations)
-            self.scale_layer_cls = partial(RotationEquivariantScale2DLayer, num_rotations=self.num_rotations)
-
-    def add_first_layer(self):
-        layer = OrderedDict()
-        layer["hermite_conv"] = HermiteConv2D(
-            input_features=self.input_channels,
-            output_features=self.hidden_channels,
-            num_rotations=self.num_rotations,
-            upsampling=self.upsampling,
-            filter_size=self.input_kern,
-            stride=self.stride,
-            padding=self.input_kern // 2 if self.pad_input else 0,
-            first_layer=True,
-        )
-        self.add_bn_layer(layer)
-        self.add_activation(layer)
-        self.features.add_module("layer0", nn.Sequential(layer))
-
-    # def add_subsequent_layers(self):
-    #     if not isinstance(self.hidden_kern, Iterable):
-    #         self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
-
-    #     for l in range(1, self.num_layers):
-    #         layer = OrderedDict()
-
-    #         if self.hidden_padding is None:
-    #             self.hidden_padding = self.hidden_kern[l - 1] // 2
-
-    #         layer["hermite_conv"] = HermiteConv2D(
-    #             input_features=self.hidden_channels * self.num_rotations,
-    #             output_features=self.hidden_channels,
-    #             num_rotations=self.num_rotations,
-    #             upsampling=self.upsampling,
-    #             filter_size=self.hidden_kern[l - 1],
-    #             stride=self.stride,
-    #             padding=self.hidden_padding,
-    #             first_layer=False,
-    #         )
-    #         self.add_bn_layer(layer)
-    #         self.add_activation(layer)
-    #         self.features.add_module("layer{}".format(l), nn.Sequential(layer))
-    
-    def add_bottleneck_bn_layer(self, layer):
-        """
-        Same as add_bn_layer(), but self.hidden_channels are replaced by 1
-        """
-        if self.batch_norm:
-            if self.independent_bn_bias:
-                layer["norm"] = self.batchnorm_layer_cls(1, momentum=self.momentum)
-            else:
-                layer["norm"] = self.batchnorm_layer_cls(
-                    1, momentum=self.momentum, affine=self.bias and self.batch_norm_scale
-                )
-                if self.bias:
-                    if not self.batch_norm_scale:
-                        layer["bias"] = self.bias_layer_cls(1)
-                elif self.batch_norm_scale:
-                    layer["scale"] = self.scale_layer_cls(1)
-
-    def add_bottleneck_layer(self):
-        """
-        Adds the bottleneck layer
-        """
-
-        layer = OrderedDict()
-
-        if self.bottleneck_padding is None:
-            self.bottleneck_padding = self.bottleneck_kernel // 2
-
-        layer["hermite_bottleneck_conv"] = HermiteConv2D(
-            input_features=self.hidden_channels * self.num_rotations,
-            output_features=1, # just one channel (num_rotations are not here specified)
-            num_rotations=self.num_rotations,
-            upsampling=self.upsampling,
-            filter_size=self.bottleneck_kernel,
-            stride=self.stride,
-            padding=self.bottleneck_padding,
-            first_layer=False,
-        )
-
-        self.add_bottleneck_bn_layer(layer)  # add the bottleneck bn_layer
-        self.add_activation(layer)
-        self.features.add_module("bottleneck_layer", nn.Sequential(layer))
-
-    def add_subsequent_layers(self):
-        if not isinstance(self.hidden_kern, Iterable):
-            self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
-
-        for l in range(1, self.num_layers):
-            layer = OrderedDict()
-
-            if self.hidden_padding is None:
-                self.hidden_padding = self.hidden_kern[l - 1] // 2
-
-            layer["hermite_conv"] = HermiteConv2D(
-                input_features=self.hidden_channels * self.num_rotations,
-                output_features=self.hidden_channels,
-                num_rotations=self.num_rotations,
-                upsampling=self.upsampling,
-                filter_size=self.hidden_kern[l - 1],
-                stride=self.stride,
-                padding=self.hidden_padding,
-                first_layer=False,
-            )
-            self.add_bn_layer(layer)
-            self.add_activation(layer)
-            self.features.add_module("layer{}".format(l), nn.Sequential(layer))
-        
-        # at the end, add also the bottleneck layer
-        self.add_bottleneck_layer()
-    
-    def forward(self, input_):
-        # print("FORWARD")
-        num_of_layers = len(self.features)
-        # print(input_.shape)
-
-        for l, feat in enumerate(self.features):
-            input_ = feat(input_)
-            # if num_of_layers-1 == l:
-                # print("last layer")
-            # print(input_.shape)
-
-        # print("------------------")
-
-        return input_
-
-    def initialize(self):
-        self.apply(self.init_conv_hermite)
-
-    @staticmethod
-    def init_conv_hermite(m):
-        if isinstance(m, HermiteConv2D):
-            nn.init.normal_(m.coeffs.data, std=0.1)
-
-    # def forward(self, input_):
-    #     ret = []
-    #     for l, feat in enumerate(self.features):
-    #         input_ = feat(input_)
-    #         ret.append(input_)
-
-    #     return torch.cat([ret[ind] for ind in self.stack], dim=1)
-
-    def laplace(self):
-        return self._input_weights_regularizer(self.features[0].hermite_conv.weights_all_rotations, avg=self.use_avg_reg)
-
-    def group_sparsity(self):
-        ret = 0
-        for l in range(1, self.num_layers):
-            ret = (
-                ret
-                + self.features[l]
-                .hermite_conv.weights_all_rotations.pow(2)
-                .sum(3, keepdim=True)
-                .sum(2, keepdim=True)
-                .sqrt()
-                .mean()
-            )
-        return ret / ((self.num_layers - 1) if self.num_layers > 1 else 1)
-
-    def regularizer(self):
-        return self.group_sparsity() * self.gamma_hidden + self.gamma_input * self.laplace()
-
-    @property
-    def outchannels(self):
-        return len(self.features) * self.hidden_channels * self.num_rotations
-
-# class RotationEquivariant2dCoreBottleneck(RotationEquivariant2dCore):
-#     def __init__(
-#         self,
-#         *args,
-#         num_rotations=8,
-#         stride=1,
-#         upsampling=2,
-#         rot_eq_batch_norm=True,
-#         input_regularizer="LaplaceL2norm",
-#         bottleneck_kernel=3,
-#         bottleneck_padding=None,
-#         **kwargs,
-#     ):
-#         self.num_rotations = num_rotations
-#         self.stride = stride
-#         self.upsampling = upsampling
-#         self.rot_eq_batch_norm = rot_eq_batch_norm
-#         self.bottleneck_kernel = bottleneck_kernel
-#         self.bottleneck_padding = bottleneck_padding
-#         super().__init__(*args,
-#             **kwargs, input_regularizer=input_regularizer)
-    
-#     def add_bottleneck_bn_layer(self, layer):
-#         """
-#         Same as add_bn_layer(), but self.hidden_channels are replaced by 1
-#         """
-#         if self.batch_norm:
-#             if self.independent_bn_bias:
-#                 layer["norm"] = self.batchnorm_layer_cls(1, momentum=self.momentum)
-#             else:
-#                 layer["norm"] = self.batchnorm_layer_cls(
-#                     1, momentum=self.momentum, affine=self.bias and self.batch_norm_scale
-#                 )
-#                 if self.bias:
-#                     if not self.batch_norm_scale:
-#                         layer["bias"] = self.bias_layer_cls(1)
-#                 elif self.batch_norm_scale:
-#                     layer["scale"] = self.scale_layer_cls(1)
-
-#     def add_bottleneck_layer(self):
-#         """
-#         Adds the bottleneck layer
-#         """
-
-#         layer = OrderedDict()
-
-#         if self.bottleneck_padding is None:
-#             self.bottleneck_padding = self.bottleneck_kernel // 2
-
-#         layer["hermite_bottleneck_conv"] = HermiteConv2D(
-#             input_features=self.hidden_channels * self.num_rotations,
-#             output_features=1, # just one channel (num_rotations are not here specified)
-#             num_rotations=self.num_rotations,
-#             upsampling=self.upsampling,
-#             filter_size=self.bottleneck_kernel,
-#             stride=self.stride,
-#             padding=self.bottleneck_padding,
-#             first_layer=False,
-#         )
-
-#         self.add_bottleneck_bn_layer(layer)  # add the bottleneck bn_layer
-#         self.add_activation(layer)
-#         self.features.add_module("bottleneck_layer", nn.Sequential(layer))
-
-#     def add_subsequent_layers(self):
-#         if not isinstance(self.hidden_kern, Iterable):
-#             self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
-
-#         for l in range(1, self.num_layers):
-#             layer = OrderedDict()
-
-#             if self.hidden_padding is None:
-#                 self.hidden_padding = self.hidden_kern[l - 1] // 2
-
-#             layer["hermite_conv"] = HermiteConv2D(
-#                 input_features=self.hidden_channels * self.num_rotations,
-#                 output_features=self.hidden_channels,
-#                 num_rotations=self.num_rotations,
-#                 upsampling=self.upsampling,
-#                 filter_size=self.hidden_kern[l - 1],
-#                 stride=self.stride,
-#                 padding=self.hidden_padding,
-#                 first_layer=False,
-#             )
-#             self.add_bn_layer(layer)
-#             self.add_activation(layer)
-#             self.features.add_module("layer{}".format(l), nn.Sequential(layer))
-        
-#         # at the end, add also the bottleneck layer
-#         self.add_bottleneck_layer()
-    
-#     def forward(self, input_):
-#         # print("FORWARD")
-#         num_of_layers = len(self.features)
-#         # print(input_.shape)
-
-#         for l, feat in enumerate(self.features):
-#             input_ = feat(input_)
-#             # if num_of_layers-1 == l:
-#                 # print("last layer")
-#             # print(input_.shape)
-
-#         # print("------------------")
-
-#         return input_
-
+    def outchannels(self): # edited .. returns just 1 channel for each rotation
+        return self.num_rotations
 
