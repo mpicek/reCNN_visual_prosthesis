@@ -133,7 +133,6 @@ class encoding_model_fixed(encoding_model):
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
         self.log("val/corr", np.mean(correlation))
 
-
 class Picek(encoding_model_fixed):
     """My model with FullFactorized2d readout"""
 
@@ -873,6 +872,102 @@ class LurzGauss(encoding_model_fixed):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
+class RotEqBottleneckGauss3dCyclic(encoding_model_fixed):
+    """Lurz's model with RotEq core, bottleneck at the end and also a gauss readout"""
+
+    def __init__(self, **config):
+        super().__init__(**config)
+        self.config = config
+        self.nonlinearity = self.config["nonlinearity"]
+
+        self.hidden_padding = None
+        assert self.config["stack"] == -1
+
+        self.core = RotationEquivariant2dCoreBottleneck(
+            num_rotations=self.config["num_rotations"],
+            stride=self.config["stride"],
+            upsampling=self.config["upsampling"],
+            rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
+            input_regularizer=self.config["input_regularizer"],
+            input_channels=self.config["input_channels"],
+            hidden_channels=self.config["core_hidden_channels"],
+            input_kern=self.config["core_input_kern"],
+            hidden_kern=self.config["core_hidden_kern"],
+            layers=self.config["core_layers"],
+            gamma_input=config["core_gamma_input"],
+            gamma_hidden=config["core_gamma_hidden"],
+            stack=config["stack"],
+            depth_separable=config["depth_separable"],
+            use_avg_reg=config["use_avg_reg"],
+            bottleneck_kernel=config["bottleneck_kernel"],
+        )
+
+
+        self.readout = Gaussian3dCyclic(
+            in_shape=(
+                self.config["num_rotations"],
+                self.config["input_size_x"],
+                self.config["input_size_y"],
+            ),
+            outdims=self.config["num_neurons"],
+            bias=self.config["readout_bias"],
+            mean_activity=self.config["mean_activity"],
+            feature_reg_weight=self.config["readout_gamma"],
+        )
+
+        self.register_buffer("laplace", torch.from_numpy(laplace()))
+        self.nonlin = bl.act_func()[config["nonlinearity"]]
+
+    def forward(self, x):
+        x = self.core(x)
+        x = self.nonlin(self.readout(x))
+        return x
+
+    
+    def __str__(self):
+        return "RotEq_Bottleneck_Gauss3dCyclic"
+    
+    def add_bottleneck(self):
+
+        layer = OrderedDict()
+
+        if self.hidden_padding is None:
+            self.hidden_padding = self.bottleneck_kernel // 2
+
+        layer["hermite_conv"] = HermiteConv2D(
+            input_features=self.config["hidden_channels"] * self.config["num_rotations"],
+            output_features=1,
+            num_rotations=self.config["num_rotations"],
+            upsampling=self.config["upsampling"],
+            filter_size=self.config["bottleneck_kernel"],
+            stride=self.config["stride"],
+            padding=self.hidden_padding,
+            first_layer=False,
+        )
+        super().add_bn_layer(layer)
+        super().add_activation(layer)
+        super().features.add_module("bottleneck", nn.Sequential(layer))
+    
+
+    def reg_readout_group_sparsity(self):
+        nw = self.readout.features.reshape(self.config["num_neurons"], -1)
+        reg_term = self.config["reg_group_sparsity"] * torch.sum(
+            torch.sqrt(torch.sum(torch.pow(nw, 2), dim=-1)), 0
+        )
+        return reg_term
+
+    def regularization(self):
+
+        readout_l1_reg = self.readout.regularizer(reduction="mean")
+        self.log("reg/readout_l1_reg", readout_l1_reg)
+
+        readout_reg = readout_l1_reg
+
+        core_reg = self.core.regularizer()
+        reg_term = readout_reg + core_reg
+        self.log("reg/core reg", core_reg)
+        self.log("reg/readout_reg", readout_reg)
+        return reg_term
 
 class Lurz(encoding_model_fixed):
     """Lurz's model"""
@@ -1291,11 +1386,22 @@ class Gaussian3dCyclic(readouts.Readout):
         self.features.data.fill_(1 / self.in_shape[0])
         if self.bias is not None:
             self.initialize_bias(mean_activity=mean_activity)
+    
+    def feature_l1(self, reduction="mean", average=None):
+        """
+        Returns l1 regularization term for features.
+        Args:
+            average(bool): Deprecated (see reduction) if True, use mean of weights for regularization
+            reduction(str): Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'
+        """
+        return self.apply_reduction(self.features.abs(), reduction=reduction, average=average)
 
     def regularizer(self, reduction="sum", average=None):
-        raise NotImplementedError(
-            "The regularizer for this readout needs to be implemented! See issue https://github.com/sinzlab/neuralpredictors/issues/127"
-        )
+        return 0 # TODO
+        # return self.feature_l1(reduction=reduction, average=average) * self.feature_reg_weight
+        # raise NotImplementedError(
+            # "The regularizer for this readout needs to be implemented! See issue https://github.com/sinzlab/neuralpredictors/issues/127"
+        # )
 
     def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs):
         """
