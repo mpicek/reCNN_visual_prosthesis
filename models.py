@@ -1,4 +1,3 @@
-from matplotlib.pyplot import grid
 from predict_neural_responses.models import *
 import pytorch_lightning as pl
 import predict_neural_responses.dnn_blocks.dnn_blocks as bl
@@ -11,13 +10,10 @@ import torch
 from torch.nn import Parameter
 from torch.nn import functional as F
 import warnings
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
-from neuralpredictors.layers.cores.base import Core
 from neuralpredictors.layers.cores.conv2d import Stacked2dCore
-from neuralpredictors import regularizers
-from neuralpredictors.layers.conv import DepthSeparableConv2d
-from neuralpredictors.layers.squeeze_excitation import SqueezeExcitationBlock
-from neuralpredictors.layers.attention import AttentionConv
 from neuralpredictors.layers.affine import Bias2DLayer, Scale2DLayer
 from neuralpredictors.layers.activations import AdaptiveELU
 from neuralpredictors.layers.hermite import (
@@ -27,6 +23,7 @@ from neuralpredictors.layers.hermite import (
     RotationEquivariantScale2DLayer,
 )
 from neuralpredictors.measures.np_functions import corr as corr_from_neuralpredictors
+from neuralpredictors.measures.np_functions import oracle_corr_jackknife, oracle_corr_conservative
 from neuralpredictors.layers.cores.conv2d import RotationEquivariant2dCore
 
 import logging
@@ -35,12 +32,26 @@ logger = logging.getLogger(__name__)
 
 
 class encoding_model_fixed(encoding_model):
-    """Parent class for system identification enconding models, keeps track of useful metrics"""
+    """Parent class for system identification enconding models, keeps track of useful metrics
+    
+    In config:
+        - test_average_batch: whether to average responses in batches when computing
+            the test set correlation (used in repeated trials to cancle the neural variability)
+        - compute_oracle_fraction: whether to compute oracle fraction or not
+        - conservative_oracle: whether to compute conservative oracle or not
+        - jackknife_oracle: whether to compute jackknife oracle or not
+        - generate_oracle_figure: whether to generate a figure of fitted line
+            describing the oracle fraction or not
+    """
 
     def __init__(self, **config):
         super().__init__()
         self.config = config
         self.test_average_batch = config["test_average_batch"]
+        self.compute_oracle_fraction = config["compute_oracle_fraction"]
+        self.conservative_oracle = config["conservative_oracle"]
+        self.jackknife_oracle = config["jackknife_oracle"]
+        self.generate_oracle_figure = config["generate_oracle_figure"]
         self.loss = PoissonLoss(avg=True)
         self.corr = Corr()
         self.save_hyperparameters()
@@ -87,19 +98,47 @@ class encoding_model_fixed(encoding_model):
 
         img, resp = batch
 
+        responses_no_mean = None
+
         if self.test_average_batch:
             # I take only one image as all images are the same (it is a repeated trial)
             # .unsqueeze(0) adds one dimension at the beginning (because I need
             # to create a batch of size 1)
             img = img[0].unsqueeze(0)
+            responses_no_mean = resp
             resp = resp.mean(0).unsqueeze(0)
 
         prediction = self.forward(img)
-        return prediction, resp
+        return prediction, resp, responses_no_mean
 
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
         return opt
+    
+    def get_fraction_oracles(self, oracles, test_correlation, generate_figure=True, oracle_label="Oracles", test_label="Test correlations", fig_name="oracle_fig.png"):
+        """
+        Given oracles and test_correlations (both for each neuron), this method
+        computes the fraction of oracle performance
+        """
+        
+        # we will fit a linear function without offset
+        def f(x, a):
+            return a * x
+        
+        slope, _ = curve_fit(f, oracles, test_correlation)
+
+        if self.generate_oracle_figure:
+            plt.scatter(oracles, test_correlation, s=1)
+            x = np.linspace(0, 1, 100)
+            plt.plot(x, f(x, slope), 'r-')
+            plt.axvline(x=0, c="black")
+            plt.axhline(y=0, c="black")
+            plt.xlabel(oracle_label)
+            plt.ylabel(test_label)
+            plt.savefig(fig_name)
+            plt.clf()
+
+        return slope
     
     def test_epoch_end(self, test_outs):
         """
@@ -108,14 +147,48 @@ class encoding_model_fixed(encoding_model):
         """
         pred = []
         resp = []
-        for (p, r) in test_outs:
+        batch_of_responses = []
+        num_of_repeats = None
+        for (p, r, r_batches) in test_outs:
+
+            # The number of repeats in the repeated trials have to be the same.
+            # We will use the first batch as an indicator, how many trials should
+            # be in every batch. If some batch does not have the same number of
+            # repeats, we discard the batch
+            if num_of_repeats == None:
+                num_of_repeats = r_batches.shape[0]
+
             pred.append(p.detach().cpu().numpy())
             resp.append(r.detach().cpu().numpy())
+
+            if r_batches.shape[0] != num_of_repeats and self.compute_oracle_fraction: # does not have the appropriate number of repeats
+                batch_of_responses.append(r_batches.detach().cpu().numpy())
         
         predictions = np.concatenate(pred)
         responses = np.concatenate(resp)
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
-        self.log("test/corr", np.mean(correlation))
+
+        batches_of_responses = None
+        if self.compute_oracle_fraction:
+            batches_of_responses = np.stack(batch_of_responses)
+
+        if self.test_average_batch:
+            self.log("test/repeated_trials/corr", np.mean(correlation))
+        else:
+            self.log("test/corr", np.mean(correlation))
+
+
+        if self.compute_oracle_fraction:
+            if self.jackknife_oracle:
+                oracles = oracle_corr_jackknife(batches_of_responses)
+                fraction_of_oracles = self.get_fraction_oracles(oracles, correlation, self.generate_oracle_figure, "Oracles jackknife", fig_name="oracle_jackknife.png")
+                self.log("test/oracle_jackknife", fraction_of_oracles[0])
+            
+            if self.conservative_oracle:
+                oracles = oracle_corr_conservative(batches_of_responses)
+                fraction_of_oracles = self.get_fraction_oracles(oracles, correlation, self.generate_oracle_figure, "Oracles conservative", fig_name="oracle_conservative.png")
+                self.log("test/oracle_conservative", fraction_of_oracles[0])
+
     
     def validation_epoch_end(self, val_outs):
         """
@@ -949,13 +1022,6 @@ class RotEqBottleneckGauss3dCyclic(encoding_model_fixed):
         super().features.add_module("bottleneck", nn.Sequential(layer))
     
 
-    def reg_readout_group_sparsity(self):
-        nw = self.readout.features.reshape(self.config["num_neurons"], -1)
-        reg_term = self.config["reg_group_sparsity"] * torch.sum(
-            torch.sqrt(torch.sum(torch.pow(nw, 2), dim=-1)), 0
-        )
-        return reg_term
-
     def regularization(self):
 
         readout_l1_reg = self.readout.regularizer(reduction="mean")
@@ -1387,21 +1453,8 @@ class Gaussian3dCyclic(readouts.Readout):
         if self.bias is not None:
             self.initialize_bias(mean_activity=mean_activity)
     
-    def feature_l1(self, reduction="mean", average=None):
-        """
-        Returns l1 regularization term for features.
-        Args:
-            average(bool): Deprecated (see reduction) if True, use mean of weights for regularization
-            reduction(str): Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'
-        """
-        return self.apply_reduction(self.features.abs(), reduction=reduction, average=average)
-
     def regularizer(self, reduction="sum", average=None):
-        return 0 # TODO
-        # return self.feature_l1(reduction=reduction, average=average) * self.feature_reg_weight
-        # raise NotImplementedError(
-            # "The regularizer for this readout needs to be implemented! See issue https://github.com/sinzlab/neuralpredictors/issues/127"
-        # )
+        return 0 #TODO
 
     def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs):
         """
