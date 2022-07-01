@@ -29,17 +29,18 @@ def get_fraction_oracles(oracles, test_correlation, generate_figure=True, oracle
     oracles[np.isinf(oracles)] = 0
     
     slope, _ = curve_fit(f, oracles, test_correlation)
+    format_float = "{:.1f}".format(slope[0]*100)
 
-    print("will we generate?----------------------------------------------------")
-    print(generate_figure)
     if generate_figure:
-        plt.scatter(oracles, test_correlation, s=1)
+        plt.scatter(oracles, test_correlation, s=1, color="orange")
         x = np.linspace(0, 1, 100)
-        plt.plot(x, f(x, slope), 'r-')
-        plt.axvline(x=0, c="black")
-        plt.axhline(y=0, c="black")
+        plt.plot(x, f(x, slope), 'r-', label=format_float + "% oracle")
+        plt.plot(x, x, 'k--', linewidth=1, label="100.0% oracle")
+        plt.axvline(x=0, c="gray", linewidth=0.5)
+        plt.axhline(y=0, c="gray", linewidth=0.5)
         plt.xlabel(oracle_label)
         plt.ylabel(test_label)
+        plt.legend(loc="upper left")
         plt.savefig(fig_name)
         plt.clf()
 
