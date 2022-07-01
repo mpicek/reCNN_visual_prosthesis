@@ -462,14 +462,15 @@ class LurzDataModule(pl.LightningDataModule):
         return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
     
     def model_performances(self, model=None, trainer=None):
-        # test = self.test_dataloader()
         model.test_average_batch = False
+        model.compute_oracle_fraction = False
         val_score = trainer.test(model, self.val_dataloader())
         test_score = trainer.test(model, self.test_dataloader())
 
         model.test_average_batch = True
+        model.compute_oracle_fraction = True
         test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader())
-        
+
         from pprint import pprint
         print("val_score")
         pprint(val_score)
@@ -477,6 +478,4 @@ class LurzDataModule(pl.LightningDataModule):
         pprint(test_score)
         print("test_repeats_averaged_score")
         pprint(test_repeats_averaged_score)
-        # for d in tqdm(test):
-        #     pprint(d)
 

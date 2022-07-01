@@ -1,5 +1,5 @@
 from model_trainer import run_wandb_training
-from models import Lurz, PicekGauss, Picek, LurzRotEq, LurzGauss
+from models import Lurz, PicekGauss, Picek, LurzRotEq, LurzGauss, RotEqBottleneckGauss3dCyclic
 from predict_neural_responses.models import CNN_SxF
 from model_trainer import Lurz_dataset_preparation_function, Antolik_dataset_preparation_function
 
@@ -9,27 +9,25 @@ PROJECT = "reCNN_visual_prosthesis"
 
 model = None
 
-
 config = {
     # GENERAL
     "seed": 42,
-    "data_name": "PicekModel",
     "batch_size": 10,
     "lr": 0.001,
     "max_epochs": 500,
 
     # CORE GENERAL CONFIG
-    "core_hidden_channels": 64,
+    "core_hidden_channels": 8,
     "core_layers": 5,
-    "core_input_kern": 3,
-    "core_hidden_kern": 3,
+    "core_input_kern": 7,
+    "core_hidden_kern": 9,
 
     # ROTATION EQUIVARIANCE CORE CONFIG
-    "num_rotations": 16,       
+    "num_rotations": 8,       
     "stride": 1,               
-    "upsampling": 1,           
+    "upsampling": 2,           
     "rot_eq_batch_norm": True, 
-    "stack": -3,               
+    "stack": -1 ,               
     "depth_separable": True,   # default ... TODO
 
     # READOUT CONFIG
@@ -37,8 +35,8 @@ config = {
     "nonlinearity": "softplus",
     
     # REGULARIZATION
-    "core_gamma_input": 0.1,
-    "core_gamma_hidden": 52,
+    "core_gamma_input": 0.00307424496692959,
+    "core_gamma_hidden": 0.28463619129195233,
     "readout_gamma": 0.17,
     "input_regularizer": "LaplaceL2norm", # for RotEqCore - default 
     "use_avg_reg": True,
@@ -54,34 +52,28 @@ config = {
     "observed_val_metric": "val/corr",
 
     "test_average_batch": False,
+    "compute_oracle_fraction": False,
+    "conservative_oracle": True,
+    "jackknife_oracle": True,
+    "generate_oracle_figure": False,
 
     # ANTOLIK
     "region": "region1",
-
     "dataset_artifact_name": "Lurz_dataset:latest",
+
+    # BOTTLENECK
+    "bottleneck_kernel": 15,
+
+    "fixed_sigma": False,
+    "init_mu_range": 0.9,
+    "init_sigma_range": 0.8,
+
 }
 
 
 def main():
     
-    # config["seed"] = 42
-    # config["data_name"] = "Antolik2016"
-    # config["region"] = "region1"
-    # config["batch_size"] = 128
-    # config["lr"] = 0.0001
-    # config["max_epochs"] = 3000
-    # config["core_hidden_channels"] = 64
-    # config["core_layers"] = 4
-    # config["core_input_kern"] = 9
-    # config["core_hidden_kern"] = 7
-    # config["readout_bias"] = True
-    # config["core_gamma_input"] = 0.01
-    # config["core_gamma_hidden"] = 0.01
-    # config["readout_gamma"] = 1
-
-    #TODO: input_channels = 1???????????
-
-    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, model_class=LurzGauss)
+    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, model_class=RotEqBottleneckGauss3dCyclic)
     return model
     
 
