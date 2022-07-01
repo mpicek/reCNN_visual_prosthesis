@@ -1,4 +1,5 @@
 from predict_neural_responses.models import *
+from utils import get_fraction_oracles
 import pytorch_lightning as pl
 import predict_neural_responses.dnn_blocks.dnn_blocks as bl
 
@@ -10,8 +11,6 @@ import torch
 from torch.nn import Parameter
 from torch.nn import functional as F
 import warnings
-from scipy.optimize import curve_fit
-import matplotlib.pyplot as plt
 
 from neuralpredictors.layers.cores.conv2d import Stacked2dCore
 from neuralpredictors.layers.affine import Bias2DLayer, Scale2DLayer
@@ -97,15 +96,13 @@ class encoding_model_fixed(encoding_model):
         """
 
         img, resp = batch
-
-        responses_no_mean = None
+        responses_no_mean = resp
 
         if self.test_average_batch:
             # I take only one image as all images are the same (it is a repeated trial)
             # .unsqueeze(0) adds one dimension at the beginning (because I need
             # to create a batch of size 1)
             img = img[0].unsqueeze(0)
-            responses_no_mean = resp
             resp = resp.mean(0).unsqueeze(0)
 
         prediction = self.forward(img)
@@ -114,31 +111,6 @@ class encoding_model_fixed(encoding_model):
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
         return opt
-    
-    def get_fraction_oracles(self, oracles, test_correlation, generate_figure=True, oracle_label="Oracles", test_label="Test correlations", fig_name="oracle_fig.png"):
-        """
-        Given oracles and test_correlations (both for each neuron), this method
-        computes the fraction of oracle performance
-        """
-        
-        # we will fit a linear function without offset
-        def f(x, a):
-            return a * x
-        
-        slope, _ = curve_fit(f, oracles, test_correlation)
-
-        if self.generate_oracle_figure:
-            plt.scatter(oracles, test_correlation, s=1)
-            x = np.linspace(0, 1, 100)
-            plt.plot(x, f(x, slope), 'r-')
-            plt.axvline(x=0, c="black")
-            plt.axhline(y=0, c="black")
-            plt.xlabel(oracle_label)
-            plt.ylabel(test_label)
-            plt.savefig(fig_name)
-            plt.clf()
-
-        return slope
     
     def test_epoch_end(self, test_outs):
         """
@@ -161,7 +133,7 @@ class encoding_model_fixed(encoding_model):
             pred.append(p.detach().cpu().numpy())
             resp.append(r.detach().cpu().numpy())
 
-            if r_batches.shape[0] != num_of_repeats and self.compute_oracle_fraction: # does not have the appropriate number of repeats
+            if r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction: # does not have the appropriate number of repeats
                 batch_of_responses.append(r_batches.detach().cpu().numpy())
         
         predictions = np.concatenate(pred)
@@ -181,13 +153,13 @@ class encoding_model_fixed(encoding_model):
         if self.compute_oracle_fraction:
             if self.jackknife_oracle:
                 oracles = oracle_corr_jackknife(batches_of_responses)
-                fraction_of_oracles = self.get_fraction_oracles(oracles, correlation, self.generate_oracle_figure, "Oracles jackknife", fig_name="oracle_jackknife.png")
-                self.log("test/oracle_jackknife", fraction_of_oracles[0])
+                fraction_of_oracles = get_fraction_oracles(oracles, correlation, generate_figure=self.generate_oracle_figure, oracle_label="Oracles jackknife", fig_name="oracle_jackknife.png")
+                self.log("test/fraction_oracle_jackknife", fraction_of_oracles[0])
             
             if self.conservative_oracle:
                 oracles = oracle_corr_conservative(batches_of_responses)
-                fraction_of_oracles = self.get_fraction_oracles(oracles, correlation, self.generate_oracle_figure, "Oracles conservative", fig_name="oracle_conservative.png")
-                self.log("test/oracle_conservative", fraction_of_oracles[0])
+                fraction_of_oracles = get_fraction_oracles(oracles, correlation, generate_figure=self.generate_oracle_figure, oracle_label="Oracles conservative", fig_name="oracle_conservative.png")
+                self.log("test/fraction_oracle_conservative", fraction_of_oracles[0])
 
     
     def validation_epoch_end(self, val_outs):
