@@ -2,8 +2,6 @@ import wandb
 from Lurz_dataset import LurzDataModule
 from tqdm import tqdm
 
-from predict_neural_responses.data_utils import Antolik2016Datamodule
-
 from models import Picek
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import EarlyStopping
@@ -12,6 +10,8 @@ from pytorch_lightning.callbacks.progress import ProgressBar
 import pytorch_lightning as pl
 
 from pprint import pprint
+
+from Antolik_dataset import AntolikDataModule
 
 
 def get_best_model(wandb_run, model_class=Picek, model_artifact_name="RotEq_FullGaussian2d"):
@@ -58,7 +58,43 @@ def Lurz_dataset_preparation_function(config, run=None):
             "input_size_x": dm.get_input_shape()[1],
             "input_size_y": dm.get_input_shape()[2],
             "num_neurons": dm.get_output_shape()[0],
-            "mean_activity": dm.get_mean(), #dm.output_shape.mean(dim=0), TODO: spocitat.. trva
+            "mean_activity": dm.get_mean(),
+        }
+    )
+
+    return dm
+
+def Antolik_dataset_preparation_function_test(config, run=None):
+    """
+        Gets config, can edit it.
+        Returns Pytorch Lightning DataModule
+    """
+
+    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
+    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
+
+    dataset_config = {"train_data_dir": path_test, 
+                      "test_data_dir": path_test, 
+                      "batch_size": config["batch_size"], 
+                      "normalize": True, 
+                      "val_size":500,}
+
+
+    if run is not None:
+        raise NotImplementedError()
+
+    dm = AntolikDataModule(**dataset_config)
+    dm.prepare_data()
+    dm.setup()
+
+    # update config for initialization of model (<- certain config parameters depend on data)
+    config.update(
+        {
+            "input_channels": dm.get_input_shape()[0],
+            "input_size_x": dm.get_input_shape()[1],
+            "input_size_y": dm.get_input_shape()[2],
+            "num_neurons": dm.get_output_shape()[0],
+            "mean_activity": dm.get_mean(), 
         }
     )
 
@@ -71,26 +107,35 @@ def Antolik_dataset_preparation_function(config, run=None):
         Returns Pytorch Lightning DataModule
     """
 
+    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
+    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
+
+    dataset_config = {"train_data_dir": path_train, 
+                      "test_data_dir": path_test, 
+                      "batch_size": config["batch_size"], 
+                      "normalize": True, 
+                      "val_size":5000,}
+
+
     if run is not None:
         raise NotImplementedError()
 
-    dm = Antolik2016Datamodule(
-        region=config["region"], batch_size=config["batch_size"], with_test_dataset=False
-    )
+    dm = AntolikDataModule(**dataset_config)
+    dm.prepare_data()
     dm.setup()
 
+    # update config for initialization of model (<- certain config parameters depend on data)
     config.update(
         {
-            "input_channels": dm.train_dataset[:][0].shape[1],
-            "input_size_x": dm.train_dataset[:][0].shape[2],
-            "input_size_y": dm.train_dataset[:][0].shape[3],
-            "num_neurons": dm.train_dataset[:][1].shape[1],
-            "mean_activity": dm.train_dataset[:][1].mean(dim=0),
+            "input_channels": dm.get_input_shape()[0],
+            "input_size_x": dm.get_input_shape()[1],
+            "input_size_y": dm.get_input_shape()[2],
+            "num_neurons": dm.get_output_shape()[0],
+            "mean_activity": dm.get_mean(), 
         }
     )
 
     return dm
-
 
 def run_wandb_training(
         config,
@@ -119,7 +164,7 @@ def run_wandb_training(
     config = dict(wandb.config)
     pprint(config)
 
-    dm = dataset_preparation_function(config, run)
+    dm = dataset_preparation_function(config, None)
 
     # Set up model
     model = model_class(**config)
