@@ -479,3 +479,17 @@ class LurzDataModule(pl.LightningDataModule):
         print("test_repeats_averaged_score")
         pprint(test_repeats_averaged_score)
 
+
+if __name__ == "__main__":
+
+    data_dir = 'data/lurz2020/static20457-5-9-preproc0'
+    dataset_config = {"data_dir": data_dir, 
+                      "batch_size": 10, 
+                      "normalize": True, 
+                      "exclude": "images"}
+
+
+    dm = LurzDataModule(**dataset_config)
+    dm.prepare_data()
+    dm.setup()
+    dm.print_dataset_info()

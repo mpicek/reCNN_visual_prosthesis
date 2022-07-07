@@ -224,3 +224,16 @@ class AntolikDataModule(pl.LightningDataModule):
             x = pickle.load(f)
         return x
 
+if __name__ == "__main__":
+
+    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
+    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
+
+    path_small_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/small_train.pickle"
+
+
+    d = AntolikDataModule(path_train, path_test, 10, val_size=5000)
+    d.prepare_data()
+    d.setup()
+    d.print_dataset_info()
+
