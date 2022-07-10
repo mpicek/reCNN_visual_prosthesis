@@ -110,7 +110,7 @@ class LurzDataModule(pl.LightningDataModule):
         image_base_seed=None,
         normalize=True,
         include_behavior=False,
-        exclude="images",
+        exclude=None,
         select_input_channel=None,
         file_tree=True,
         return_test_sampler=False,
@@ -139,7 +139,7 @@ class LurzDataModule(pl.LightningDataModule):
         self.return_test_sampler=return_test_sampler
         self.oracle_condition=oracle_condition
         self.num_workers=num_workers
-        
+
         # following lines all copied ... just some checks
         assert any(
         [image_ids is None, all([image_n is None, image_base_seed is None])]
@@ -485,8 +485,8 @@ if __name__ == "__main__":
     data_dir = 'data/lurz2020/static20457-5-9-preproc0'
     dataset_config = {"data_dir": data_dir, 
                       "batch_size": 10, 
-                      "normalize": True, 
-                      "exclude": "images"}
+                      "normalize": True}
+                    #   "exclude": None}
 
 
     dm = LurzDataModule(**dataset_config)

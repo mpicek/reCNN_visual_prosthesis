@@ -232,8 +232,8 @@ if __name__ == "__main__":
     path_small_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/small_train.pickle"
 
 
-    d = AntolikDataModule(path_train, path_test, 10, val_size=5000)
-    d.prepare_data()
-    d.setup()
-    d.print_dataset_info()
+    dm = AntolikDataModule(path_test, path_test, 10, val_size=500)
+    dm.prepare_data()
+    dm.setup()
+    dm.print_dataset_info()
 

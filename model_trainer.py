@@ -1,20 +1,20 @@
 import wandb
 from Lurz_dataset import LurzDataModule
-from tqdm import tqdm
 
-from models import Picek
+from models import reCNN_FullFactorized
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import ProgressBar
 import pytorch_lightning as pl
+from models import reCNN_bottleneck_CyclicGauss3d
 
 from pprint import pprint
 
 from Antolik_dataset import AntolikDataModule
 
 
-def get_best_model(wandb_run, model_class=Picek, model_artifact_name="RotEq_FullGaussian2d"):
+def get_best_model(wandb_run, model_class=reCNN_bottleneck_CyclicGauss3d, model_artifact_name="reCNN_bottleneck_CyclicGauss3d"):
 
 
     if model_artifact_name == None:
@@ -43,8 +43,8 @@ def Lurz_dataset_preparation_function(config, run=None):
     #TODO: add artifact
     dataset_config = {"data_dir": data_dir, 
                       "batch_size": config["batch_size"], 
-                      "normalize": True, 
-                      "exclude": "images"}
+                      "normalize": True}
+                    #   "exclude": None}
 
 
     dm = LurzDataModule(**dataset_config)
@@ -143,7 +143,7 @@ def run_wandb_training(
         entity, 
         project,
         model_artifact_name = None, 
-        model_class=Picek, 
+        model_class=reCNN_FullFactorized, 
         early_stopping_monitor="val/corr", 
         early_stopping_mode="max", 
         model_checkpoint_monitor="val/corr", 

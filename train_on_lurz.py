@@ -1,7 +1,6 @@
 from model_trainer import run_wandb_training
-from models import Lurz, PicekGauss, Picek, LurzRotEq, LurzGauss, RotEqBottleneckGauss3dCyclic
-from predict_neural_responses.models import CNN_SxF
-from model_trainer import Lurz_dataset_preparation_function, Antolik_dataset_preparation_function
+from models import reCNN_bottleneck_CyclicGauss3d
+from model_trainer import Lurz_dataset_preparation_function
 
 
 ENTITY = "csng-cuni"
@@ -13,7 +12,7 @@ config = {
     # GENERAL
     "seed": 42,
     "batch_size": 10,
-    "lr": 0.001,
+    "lr": 0.0001,
     "max_epochs": 500,
 
     # CORE GENERAL CONFIG
@@ -47,7 +46,7 @@ config = {
 
     # TRAINER
     "patience": 10,
-    "train_on_val": False, # in case you want to quickly check that your model "compiles" correctly
+    "train_on_val": False, # in case you want to quickly check that your model runs correctly
     "test": True,
     "observed_val_metric": "val/corr",
 
@@ -64,16 +63,17 @@ config = {
     # BOTTLENECK
     "bottleneck_kernel": 15,
 
-    "fixed_sigma": False,
-    "init_mu_range": 0.9,
-    "init_sigma_range": 0.8,
+    # "fixed_sigma": False,
+    "fixed_sigma": True,
+    "init_mu_range": 0.1,
+    "init_sigma_range": 0.7,
 
 }
 
 
 def main():
     
-    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, model_class=RotEqBottleneckGauss3dCyclic)
+    model = run_wandb_training(config, Lurz_dataset_preparation_function, ENTITY, PROJECT, model_class=reCNN_bottleneck_CyclicGauss3d)
     return model
     
 

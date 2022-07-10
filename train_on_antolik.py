@@ -1,5 +1,5 @@
 from model_trainer import run_wandb_training
-from models import RotEqBottleneckGauss3dCyclic
+from models import reCNN_bottleneck_CyclicGauss3d
 from model_trainer import Antolik_dataset_preparation_function
 
 
@@ -67,12 +67,13 @@ config = {
     "init_mu_range": 0.9,
     "init_sigma_range": 0.8,
 
+
 }
 
 
 def main():
     
-    model = run_wandb_training(config, Antolik_dataset_preparation_function, ENTITY, PROJECT, model_class=RotEqBottleneckGauss3dCyclic)
+    model = run_wandb_training(config, Antolik_dataset_preparation_function, ENTITY, PROJECT, model_class=reCNN_bottleneck_CyclicGauss3d)
     return model
     
 
