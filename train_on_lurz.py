@@ -27,7 +27,7 @@ config = {
     "upsampling": 2,           
     "rot_eq_batch_norm": True, 
     "stack": -1 ,               
-    "depth_separable": True,   # default ... TODO
+    "depth_separable": True,
 
     # READOUT CONFIG
     "readout_bias": True,
@@ -65,8 +65,8 @@ config = {
 
     # "fixed_sigma": False,
     "fixed_sigma": True,
-    "init_mu_range": 0.1,
-    "init_sigma_range": 0.7,
+    "init_mu_range": 0.5,
+    "init_sigma_range": 0.5,
 
 }
 

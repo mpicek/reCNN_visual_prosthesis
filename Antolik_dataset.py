@@ -97,7 +97,7 @@ class AntolikDataModule(pl.LightningDataModule):
         print("Data loaded successfully!")
 
         # Assign train/val datasets for use in dataloaders
-        if stage == "fit" or stage == "predict" or stage is None: # TODO: predict make separate
+        if stage == "fit" or stage == "predict" or stage is None:
 
             indices = np.arange(0, len(self.train_data))
 

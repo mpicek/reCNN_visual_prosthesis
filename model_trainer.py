@@ -40,7 +40,6 @@ def Lurz_dataset_preparation_function(config, run=None):
         dataset_artifact = run.use_artifact(config["dataset_artifact_name"])
         data_dir = dataset_artifact.download()
 
-    #TODO: add artifact
     dataset_config = {"data_dir": data_dir, 
                       "batch_size": config["batch_size"], 
                       "normalize": True}

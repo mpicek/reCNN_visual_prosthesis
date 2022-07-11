@@ -27,7 +27,7 @@ config = {
     "upsampling": 2,           
     "rot_eq_batch_norm": True, 
     "stack": -1 ,               
-    "depth_separable": True,   # default ... TODO
+    "depth_separable": True,
 
     # READOUT CONFIG
     "readout_bias": True,

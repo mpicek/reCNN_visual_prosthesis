@@ -74,7 +74,6 @@ class RepeatsBatchSampler(Sampler):
         return len(self.repeat_index)
 
 
-# TODO: normalizaci a pripadne dalsi transformace dat do transforms
 class LurzDataModule(pl.LightningDataModule):
     """
     Based on Lurz 2020 code - mouse_loaders.py.
@@ -257,7 +256,7 @@ class LurzDataModule(pl.LightningDataModule):
         # train, test and val datasets are later created based on 
 
         # Assign train/val datasets for use in dataloaders
-        if stage == "fit" or stage == "predict" or stage is None: # TODO: predict make separate 
+        if stage == "fit" or stage == "predict" or stage is None:
             subset_idx_train = None
             subset_idx_val = np.where(tier_array == "validation")[0]
             
@@ -340,7 +339,7 @@ class LurzDataModule(pl.LightningDataModule):
         """
         print(" ------------ DATASET INFO ------------ ")
         print(" SHAPES:")
-        dataloader = DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+        dataloader = DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) 
         print(f"    Input shape (images): {self.get_input_shape()}")
         print("    With batch size also: ", end='')
         print(next(iter(dataloader)).images.shape)
@@ -359,7 +358,7 @@ class LurzDataModule(pl.LightningDataModule):
         
 
     def train_dataloader(self):
-        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size, num_workers=self.num_workers) #TODO: shuffle=True??? https://github.com/PyTorchLightning/pytorch-lightning/discussions/7332
+        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
 
     def val_dataloader(self):
         return DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
@@ -458,7 +457,6 @@ class LurzDataModule(pl.LightningDataModule):
         return (self.data_key, {"test": dataloader}) if get_key else {"test": dataloader}
 
     def predict_dataloader(self):
-        # TODO: return some separate subset for prediction and not only test
         return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
     
     def model_performances(self, model=None, trainer=None):
