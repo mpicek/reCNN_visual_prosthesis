@@ -10,7 +10,10 @@ from neuralpredictors.layers.hermite import (
     HermiteConv2D,
 )
 from neuralpredictors.measures.np_functions import corr as corr_from_neuralpredictors
-from neuralpredictors.measures.np_functions import oracle_corr_jackknife, oracle_corr_conservative
+from neuralpredictors.measures.np_functions import (
+    oracle_corr_jackknife,
+    oracle_corr_conservative,
+)
 from neuralpredictors.layers.cores.conv2d import RotationEquivariant2dCore
 
 import logging
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class ExtendedEncodingModel(encoding_model):
     """Parent class for system identification enconding models, keeps track of useful metrics
-    
+
     In config:
         - test_average_batch: whether to average responses in batches when computing
             the test set correlation (used in repeated trials to cancle the neural variability)
@@ -62,9 +65,9 @@ class ExtendedEncodingModel(encoding_model):
 
     def validation_step(self, batch, batch_idx):
         """
-            - We just get prediction and return them with target. Later in validation_epoch_end,
-                we compute the correlation on the whole validation set (and not on separate
-                batches with final averaging)
+        - We just get prediction and return them with target. Later in validation_epoch_end,
+            we compute the correlation on the whole validation set (and not on separate
+            batches with final averaging)
         """
 
         img, resp = batch
@@ -74,16 +77,15 @@ class ExtendedEncodingModel(encoding_model):
 
         return prediction, resp
 
-
     def test_step(self, batch, batch_idx):
         """
-            - If self.test_average_batch == True, then we average the responses of
-                the batch (because it is the same image shown multiple times to cancel
-                out the noise)
+        - If self.test_average_batch == True, then we average the responses of
+            the batch (because it is the same image shown multiple times to cancel
+            out the noise)
 
-            - We just get prediction and return them with target. Later in validation_epoch_end,
-                we compute the correlation on the whole validation set (and not on separate
-                batches with final averaging).
+        - We just get prediction and return them with target. Later in validation_epoch_end,
+            we compute the correlation on the whole validation set (and not on separate
+            batches with final averaging).
         """
 
         img, resp = batch
@@ -102,11 +104,11 @@ class ExtendedEncodingModel(encoding_model):
     def configure_optimizers(self):
         opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
         return opt
-    
+
     def test_epoch_end(self, test_outs):
         """
-            We compute the correlation on the whole set. Predictions with target
-            responses are in test_outs (= what each test_step() returned)
+        We compute the correlation on the whole set. Predictions with target
+        responses are in test_outs (= what each test_step() returned)
         """
         pred = []
         resp = []
@@ -124,9 +126,11 @@ class ExtendedEncodingModel(encoding_model):
             pred.append(p.detach().cpu().numpy())
             resp.append(r.detach().cpu().numpy())
 
-            if r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction: # does not have the appropriate number of repeats
+            if (
+                r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction
+            ):  # does not have the appropriate number of repeats
                 batch_of_responses.append(r_batches.detach().cpu().numpy())
-        
+
         predictions = np.concatenate(pred)
         responses = np.concatenate(resp)
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
@@ -143,33 +147,44 @@ class ExtendedEncodingModel(encoding_model):
         if self.compute_oracle_fraction:
             if self.jackknife_oracle:
                 oracles = oracle_corr_jackknife(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(oracles, correlation, generate_figure=self.generate_oracle_figure, oracle_label="Oracles jackknife", fig_name="oracle_jackknife.png")
+                fraction_of_oracles = get_fraction_oracles(
+                    oracles,
+                    correlation,
+                    generate_figure=self.generate_oracle_figure,
+                    oracle_label="Oracles jackknife",
+                    fig_name="oracle_jackknife.png",
+                )
                 self.log("test/fraction_oracle_jackknife", fraction_of_oracles[0])
-            
+
             if self.conservative_oracle:
                 oracles = oracle_corr_conservative(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(oracles, correlation, generate_figure=self.generate_oracle_figure, oracle_label="Oracles conservative", fig_name="oracle_conservative.png")
+                fraction_of_oracles = get_fraction_oracles(
+                    oracles,
+                    correlation,
+                    generate_figure=self.generate_oracle_figure,
+                    oracle_label="Oracles conservative",
+                    fig_name="oracle_conservative.png",
+                )
                 self.log("test/fraction_oracle_conservative", fraction_of_oracles[0])
 
-    
     def validation_epoch_end(self, val_outs):
         """
-            We compute the correlation on the whole set. Predictions with target
-            responses are in val_outs (= what each val_step() returned)
+        We compute the correlation on the whole set. Predictions with target
+        responses are in val_outs (= what each val_step() returned)
         """
         pred = []
         resp = []
         for (p, r) in val_outs:
             pred.append(p.detach().cpu().numpy())
             resp.append(r.detach().cpu().numpy())
-        
+
         predictions = np.concatenate(pred)
         responses = np.concatenate(resp)
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
         self.log("val/corr", np.mean(correlation))
 
-class reCNN_FullFactorized(ExtendedEncodingModel):
 
+class reCNN_FullFactorized(ExtendedEncodingModel):
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
@@ -192,13 +207,17 @@ class reCNN_FullFactorized(ExtendedEncodingModel):
             gamma_hidden=config["core_gamma_hidden"],
             stack=config["stack"],
             depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"]
+            use_avg_reg=config["use_avg_reg"],
         )
 
         self.readout = readouts.FullFactorized2d(
             in_shape=(
-                self.config["core_hidden_channels"] * self.config["num_rotations"] * abs(self.config["stack"]),
-                self.config["input_size_x"], # ocividne se to padduje, takze to neztraci rozmery
+                self.config["core_hidden_channels"]
+                * self.config["num_rotations"]
+                * abs(self.config["stack"]),
+                self.config[
+                    "input_size_x"
+                ],  # ocividne se to padduje, takze to neztraci rozmery
                 self.config["input_size_y"],
             ),
             outdims=self.config["num_neurons"],
@@ -214,10 +233,10 @@ class reCNN_FullFactorized(ExtendedEncodingModel):
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
-    
+
     def __str__(self):
         return "reCNN_FullFactorized2d"
-    
+
     def reg_readout_spatial_smoothness(self):
         nw = self.readout.normalized_spatial()
         reg_term = torch.sqrt(
@@ -264,15 +283,17 @@ class reCNN_FullFactorized(ExtendedEncodingModel):
         self.log("reg/readout_group_sparsity", group_sparsity)
         self.log("reg/readout_spatial_sparsity", spatial_sparsity)
 
-        readout_reg = readout_l1_reg + spatial_smoothness + group_sparsity + spatial_sparsity
+        readout_reg = (
+            readout_l1_reg + spatial_smoothness + group_sparsity + spatial_sparsity
+        )
         core_reg = self.core.regularizer()
         reg_term = readout_reg + core_reg
         self.log("reg/core reg", core_reg)
         self.log("reg/readout_reg", readout_reg)
         return reg_term
 
-class reCNN_Gauss2D(ExtendedEncodingModel):
 
+class reCNN_Gauss2D(ExtendedEncodingModel):
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
@@ -295,13 +316,14 @@ class reCNN_Gauss2D(ExtendedEncodingModel):
             gamma_hidden=config["core_gamma_hidden"],
             stack=config["stack"],
             depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"]
+            use_avg_reg=config["use_avg_reg"],
         )
-
 
         self.readout = readouts.FullGaussian2d(
             in_shape=(
-                self.config["core_hidden_channels"] * self.config["num_rotations"] * abs(self.config["stack"]),
+                self.config["core_hidden_channels"]
+                * self.config["num_rotations"]
+                * abs(self.config["stack"]),
                 self.config["input_size_x"],
                 self.config["input_size_y"],
             ),
@@ -318,10 +340,10 @@ class reCNN_Gauss2D(ExtendedEncodingModel):
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
-    
+
     def __str__(self):
         return "reCNN_FullGaussian2d"
-    
+
     def regularization(self):
 
         readout_l1_reg = self.readout.regularizer(reduction="mean")
@@ -332,6 +354,7 @@ class reCNN_Gauss2D(ExtendedEncodingModel):
         self.log("reg/core reg", core_reg)
         self.log("reg/readout_reg", readout_reg)
         return reg_term
+
 
 class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
     """
@@ -366,7 +389,6 @@ class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
             bottleneck_kernel=config["bottleneck_kernel"],
         )
 
-
         self.readout = readouts.FullGaussian2d(
             in_shape=(
                 self.config["num_rotations"],
@@ -387,10 +409,9 @@ class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
         x = self.nonlin(self.readout(x))
         return x
 
-    
     def __str__(self):
         return "reCNN_bottleneck_Gauss2d"
-    
+
     def add_bottleneck(self):
 
         layer = OrderedDict()
@@ -399,7 +420,8 @@ class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
             self.hidden_padding = self.bottleneck_kernel // 2
 
         layer["hermite_conv"] = HermiteConv2D(
-            input_features=self.config["hidden_channels"] * self.config["num_rotations"],
+            input_features=self.config["hidden_channels"]
+            * self.config["num_rotations"],
             output_features=1,
             num_rotations=self.config["num_rotations"],
             upsampling=self.config["upsampling"],
@@ -411,7 +433,6 @@ class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
         super().add_bn_layer(layer)
         super().add_activation(layer)
         super().features.add_module("bottleneck", nn.Sequential(layer))
-    
 
     def regularization(self):
 
@@ -425,6 +446,7 @@ class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
         self.log("reg/core reg", core_reg)
         self.log("reg/readout_reg", readout_reg)
         return reg_term
+
 
 class reCNN_bottleneck_NoReadout(ExtendedEncodingModel):
     """
@@ -466,7 +488,7 @@ class reCNN_bottleneck_NoReadout(ExtendedEncodingModel):
     def forward(self, x):
         x = self.core(x)
         return x
-    
+
     def __str__(self):
         return "reCNN_bottleneck_NoReadout"
 
@@ -478,6 +500,7 @@ class reCNN_bottleneck_NoReadout(ExtendedEncodingModel):
         self.log("reg/core reg", core_reg)
         return reg_term
 
+
 class LurzReimplementation(ExtendedEncodingModel):
     """Lurz's model"""
 
@@ -487,7 +510,6 @@ class LurzReimplementation(ExtendedEncodingModel):
         self.loss = PoissonLoss(avg=True)
         self.corr = Corr()
         self.nonlinearity = self.config["nonlinearity"]
-        
 
         self.core = cores.SE2dCore(
             stride=self.config["stride"],
@@ -497,14 +519,13 @@ class LurzReimplementation(ExtendedEncodingModel):
             input_kern=self.config["core_input_kern"],
             hidden_kern=self.config["core_hidden_kern"],
             layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"], # 0
-            gamma_hidden=config["core_gamma_hidden"], # 0
+            gamma_input=config["core_gamma_input"],  # 0
+            gamma_hidden=config["core_gamma_hidden"],  # 0
             stack=config["stack"],
             depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"]
+            use_avg_reg=config["use_avg_reg"],
         )
 
-        
         self.readout = readouts.FullGaussian2d(
             in_shape=(
                 self.config["core_hidden_channels"] * abs(self.config["stack"]),
@@ -524,10 +545,9 @@ class LurzReimplementation(ExtendedEncodingModel):
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
-    
+
     def __str__(self):
         return "StackedCore_FullGaussian2d"
-    
 
     def reg_readout_group_sparsity(self):
         nw = self.readout.features.reshape(self.config["num_neurons"], -1)
@@ -547,6 +567,7 @@ class LurzReimplementation(ExtendedEncodingModel):
         self.log("reg/core reg", core_reg)
         self.log("reg/readout_reg", readout_reg)
         return reg_term
+
 
 class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
     """Lurz's model with RotEq core, bottleneck at the end and also a gauss readout"""
@@ -607,10 +628,10 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
-    
+
     def __str__(self):
         return "reCNN_bottleneck_CyclicGauss3d"
-    
+
     def add_bottleneck(self):
 
         layer = OrderedDict()
@@ -619,7 +640,8 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
             self.hidden_padding = self.bottleneck_kernel // 2
 
         layer["hermite_conv"] = HermiteConv2D(
-            input_features=self.config["hidden_channels"] * self.config["num_rotations"],
+            input_features=self.config["hidden_channels"]
+            * self.config["num_rotations"],
             output_features=1,
             num_rotations=self.config["num_rotations"],
             upsampling=self.config["upsampling"],
@@ -631,7 +653,6 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
         super().add_bn_layer(layer)
         super().add_activation(layer)
         super().features.add_module("bottleneck", nn.Sequential(layer))
-    
 
     def regularization(self):
 
@@ -640,6 +661,65 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
 
         readout_reg = readout_l1_reg
 
+        core_reg = self.core.regularizer()
+        reg_term = readout_reg + core_reg
+        self.log("reg/core reg", core_reg)
+        self.log("reg/readout_reg", readout_reg)
+        return reg_term
+
+
+class Lurz_Baseline(ExtendedEncodingModel):
+    """Lurz's model used as a baseline model"""
+
+    def __init__(self, **config):
+        super().__init__(**config)
+        self.config = config
+        self.nonlinearity = self.config["nonlinearity"]
+
+        self.core = cores.SE2dCore(
+            stride=self.config["stride"],
+            input_regularizer=self.config["input_regularizer"],
+            input_channels=self.config["input_channels"],
+            hidden_channels=self.config["core_hidden_channels"],
+            input_kern=self.config["core_input_kern"],
+            hidden_kern=self.config["core_hidden_kern"],
+            layers=self.config["core_layers"],
+            gamma_input=config["core_gamma_input"],  # 0
+            gamma_hidden=config["core_gamma_hidden"],  # 0
+            stack=config["stack"],
+            depth_separable=config["depth_separable"],
+            use_avg_reg=config["use_avg_reg"],
+        )
+
+        self.readout = readouts.FullFactorized2d(
+            in_shape=(
+                self.config["core_hidden_channels"]
+                * self.config["num_rotations"]
+                * abs(self.config["stack"]),
+                self.config["input_size_x"],
+                self.config["input_size_y"],
+            ),
+            outdims=self.config["num_neurons"],
+            bias=self.config["readout_bias"],
+            mean_activity=self.config["mean_activity"],
+            spatial_and_feature_reg_weight=self.config["readout_gamma"],
+        )
+
+        self.register_buffer("laplace", torch.from_numpy(laplace()))
+        self.nonlin = bl.act_func()[config["nonlinearity"]]
+
+    def forward(self, x):
+        x = self.core(x)
+        x = self.nonlin(self.readout(x))
+        return x
+
+    def __str__(self):
+        return "Stacked_FullGaussian2d"
+
+    def regularization(self):
+        readout_l1_reg = self.readout.regularizer(reduction="mean")
+        self.log("reg/readout_l1_reg", readout_l1_reg)
+        readout_reg = readout_l1_reg
         core_reg = self.core.regularizer()
         reg_term = readout_reg + core_reg
         self.log("reg/core reg", core_reg)

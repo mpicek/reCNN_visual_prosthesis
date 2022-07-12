@@ -16,14 +16,17 @@ class AntolikDataset(Dataset):
         self.normalize = normalize
 
         self.data = self.pickle_read(path)
-        
-        self.transform_list = transforms.Compose([transforms.Normalize((45.2315, ), (26.6845, ))])
-        
+
+        self.transform_list = transforms.Compose(
+            [transforms.Normalize((45.2315,), (26.6845,))]
+        )
+
     def __getitem__(self, index):
         x = self.data[index]["stimulus"]
         x = np.expand_dims(x, axis=0)
-        y = np.concatenate([self.data[index]["V1_Exc_L2/3"], self.data[index]["V1_Inh_L2/3"]])
-        
+        y = np.concatenate(
+            [self.data[index]["V1_Exc_L2/3"], self.data[index]["V1_Inh_L2/3"]]
+        )
 
         data = torch.from_numpy(x)
         target = torch.from_numpy(y)
@@ -32,10 +35,10 @@ class AntolikDataset(Dataset):
             data = self.transform_list(data)
 
         return (data.float(), target.float())
-    
+
     def __len__(self):
         return len(self.data)
-    
+
     def pickle_read(self, path):
         with open(path, "rb") as f:
             x = pickle.load(f)
@@ -62,10 +65,9 @@ class AntolikDataModule(pl.LightningDataModule):
         self.test_data_dir = test_data_dir
         self.batch_size = batch_size
         # seed=None,
-        self.normalize=normalize
-        self.num_workers=num_workers
+        self.normalize = normalize
+        self.num_workers = num_workers
         self.val_size = val_size
-
 
     def prepare_data(self):
         """
@@ -76,20 +78,24 @@ class AntolikDataModule(pl.LightningDataModule):
         # just download the data
         train_path = pathlib.Path(self.train_data_dir)
         test_path = pathlib.Path(self.test_data_dir)
-        
+
         if not train_path.exists():
-            raise Exception("The .pickle file with Antolik train dataset does not exist.")
+            raise Exception(
+                "The .pickle file with Antolik train dataset does not exist."
+            )
 
         if not test_path.exists():
-            raise Exception("The .pickle file with Antolik test dataset does not exist.")
-
+            raise Exception(
+                "The .pickle file with Antolik test dataset does not exist."
+            )
 
     def setup(self, stage: Optional[str] = None):
         # stage is "fit" or "test" or "predict"
         # when stage=None -> both "fit" and "test"
-        
 
-        self.train_dataset = AntolikDataset(self.train_data_dir, normalize=self.normalize)
+        self.train_dataset = AntolikDataset(
+            self.train_data_dir, normalize=self.normalize
+        )
         self.train_data = self.pickle_read(self.train_data_dir)
         self.test_dataset = AntolikDataset(self.test_data_dir, normalize=self.normalize)
         self.test_data = self.pickle_read(self.test_data_dir)
@@ -105,16 +111,15 @@ class AntolikDataModule(pl.LightningDataModule):
             rng.shuffle(indices)
             indices_keys = [list(self.train_data.keys())[i] for i in indices]
 
-            subset_idx_val = indices_keys[0:self.val_size]
-            subset_idx_train = indices_keys[self.val_size:]
+            subset_idx_val = indices_keys[0 : self.val_size]
+            subset_idx_train = indices_keys[self.val_size :]
 
             self.subset_idx_val = subset_idx_val
-            
+
             self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
             self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
             self.val_sampler = SubsetSequentialSampler(subset_idx_val)
 
-        
         if stage == "test" or stage is None:
             indices = np.arange(0, len(self.test_data))
             subset_idx_test = [list(self.test_data.keys())[i] for i in indices]
@@ -129,16 +134,22 @@ class AntolikDataModule(pl.LightningDataModule):
         return y[0].shape
 
     def get_mean(self):
-        """ Computes the mean response of the train dataset """
-        
-        mean_path = pathlib.Path(self.train_data_dir.rsplit('.pickle', 1)[0] + "_mean.npy")
+        """Computes the mean response of the train dataset"""
+
+        mean_path = pathlib.Path(
+            self.train_data_dir.rsplit(".pickle", 1)[0] + "_mean.npy"
+        )
 
         if mean_path.exists():
             mean = np.load(mean_path)
             print("Loaded precomputed mean from " + str(mean_path))
             return torch.from_numpy(mean)
 
-        dataloader = DataLoader(self.train_dataset, sampler=self.train_sequential_sampler, batch_size=self.batch_size)
+        dataloader = DataLoader(
+            self.train_dataset,
+            sampler=self.train_sequential_sampler,
+            batch_size=self.batch_size,
+        )
         summed = torch.zeros(self.get_output_shape())
 
         for (_, y) in dataloader:
@@ -149,16 +160,16 @@ class AntolikDataModule(pl.LightningDataModule):
         np.save(mean_path, mean)
         print("Created mean array and saved to " + str(mean_path))
         return mean
-    
+
     def train_len(self):
         return len(self.train_random_sampler)
-    
+
     def val_len(self):
         return len(self.val_sampler)
-    
+
     def test_len(self):
         return len(self.test_sampler)
-    
+
     def __len__(self):
         """The length of ALL the data we have (train + val + test)"""
         return self.train_len() + self.val_len() + self.test_len()
@@ -169,13 +180,17 @@ class AntolikDataModule(pl.LightningDataModule):
         """
         print(" ------------ DATASET INFO ------------ ")
         print(" SHAPES:")
-        dataloader = DataLoader(self.train_dataset, sampler=self.train_random_sampler, batch_size=self.batch_size)
+        dataloader = DataLoader(
+            self.train_dataset,
+            sampler=self.train_random_sampler,
+            batch_size=self.batch_size,
+        )
         print(f"    Input shape (images): {self.get_input_shape()}")
-        print("    With batch size also: ", end='')
+        print("    With batch size also: ", end="")
         print(next(iter(dataloader))[0].shape)
 
         print(f"    Output shape (responses): {self.get_output_shape()}")
-        print("    With batch size also: ", end='')
+        print("    With batch size also: ", end="")
         print(next(iter(dataloader))[1].shape)
 
         print(" LENGTH:")
@@ -183,23 +198,42 @@ class AntolikDataModule(pl.LightningDataModule):
         print(f"    Length of the train set is {self.train_len()}")
         print(f"    Length of the val set is {self.val_len()}")
         print(f"    Length of the test set is {self.test_len()}")
-        
+
         print(" -------------------------------------- ")
-        
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, sampler=self.train_random_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.train_dataset,
+            sampler=self.train_random_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def val_dataloader(self):
         # validation data are in the variable train_data (but the indices are splitted to self.val_sampler)
-        return DataLoader(self.train_dataset, sampler=self.val_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.train_dataset,
+            sampler=self.val_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.test_dataset,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def get_oracle_dataloader(self):
         # the only difference from test_dataloader is that we hardcode batch_size=10
-        return DataLoader(self.test_dataset, sampler=self.test_sampler, batch_size=10, num_workers=self.num_workers)
+        return DataLoader(
+            self.test_dataset,
+            sampler=self.test_sampler,
+            batch_size=10,
+            num_workers=self.num_workers,
+        )
 
     def model_performances(self, model=None, trainer=None):
         model.test_average_batch = False
@@ -212,17 +246,19 @@ class AntolikDataModule(pl.LightningDataModule):
         test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader())
 
         from pprint import pprint
+
         print("val_score")
         pprint(val_score)
         print("test_score")
         pprint(test_score)
         print("test_repeats_averaged_score")
         pprint(test_repeats_averaged_score)
-    
+
     def pickle_read(self, path):
         with open(path, "rb") as f:
             x = pickle.load(f)
         return x
+
 
 if __name__ == "__main__":
 
@@ -231,9 +267,7 @@ if __name__ == "__main__":
 
     path_small_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/small_train.pickle"
 
-
     dm = AntolikDataModule(path_test, path_test, 10, val_size=500)
     dm.prepare_data()
     dm.setup()
     dm.print_dataset_info()
-

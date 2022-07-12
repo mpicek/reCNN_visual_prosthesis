@@ -58,8 +58,10 @@ class RepeatsBatchSampler(Sampler):
         """
         if subset_index is None:
             subset_index = np.arange(len(keys))
-        _, inv = np.unique(keys[subset_index], return_inverse=True) # assigns a batch to each trial
-        self.repeat_index = np.unique(inv) # on which index we are at
+        _, inv = np.unique(
+            keys[subset_index], return_inverse=True
+        )  # assigns a batch to each trial
+        self.repeat_index = np.unique(inv)  # on which index we are at
         self.repeat_sets = inv
         self.subset_index = subset_index
         self.batch_size = 10
@@ -91,7 +93,6 @@ class LurzDataModule(pl.LightningDataModule):
 
     _URL = "https://gin.g-node.org/cajal/Lurz2020/archive/master.zip"
 
-
     def __init__(
         self,
         data_dir,
@@ -114,74 +115,101 @@ class LurzDataModule(pl.LightningDataModule):
         file_tree=True,
         return_test_sampler=False,
         oracle_condition=None,
-        num_workers=0
+        num_workers=0,
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         # seed=None,
-        self.areas=areas
-        self.layers=layers
-        self.tier=tier
-        self.neuron_ids=neuron_ids
-        self.neuron_n=neuron_n
-        self.exclude_neuron_n=exclude_neuron_n
-        self.neuron_base_seed=neuron_base_seed
-        self.image_ids=image_ids
-        self.image_n=image_n
-        self.image_base_seed=image_base_seed
-        self.normalize=normalize
-        self.include_behavior=include_behavior
-        self.exclude=exclude
-        self.select_input_channel=select_input_channel
-        self.file_tree=file_tree
-        self.return_test_sampler=return_test_sampler
-        self.oracle_condition=oracle_condition
-        self.num_workers=num_workers
+        self.areas = areas
+        self.layers = layers
+        self.tier = tier
+        self.neuron_ids = neuron_ids
+        self.neuron_n = neuron_n
+        self.exclude_neuron_n = exclude_neuron_n
+        self.neuron_base_seed = neuron_base_seed
+        self.image_ids = image_ids
+        self.image_n = image_n
+        self.image_base_seed = image_base_seed
+        self.normalize = normalize
+        self.include_behavior = include_behavior
+        self.exclude = exclude
+        self.select_input_channel = select_input_channel
+        self.file_tree = file_tree
+        self.return_test_sampler = return_test_sampler
+        self.oracle_condition = oracle_condition
+        self.num_workers = num_workers
 
         # following lines all copied ... just some checks
         assert any(
-        [image_ids is None, all([image_n is None, image_base_seed is None])]
+            [image_ids is None, all([image_n is None, image_base_seed is None])]
         ), "image_ids can not be set at the same time with anhy other image selection criteria"
         assert any(
             [
                 self.neuron_ids is None,
-                all([neuron_n is None, neuron_base_seed is None, areas is None, layers is None, exclude_neuron_n == 0]),
+                all(
+                    [
+                        neuron_n is None,
+                        neuron_base_seed is None,
+                        areas is None,
+                        layers is None,
+                        exclude_neuron_n == 0,
+                    ]
+                ),
             ]
         ), "neuron_ids can not be set at the same time with any other neuron selection criteria"
         assert any(
             [exclude_neuron_n == 0, neuron_base_seed is not None]
         ), "neuron_base_seed must be set when exclude_neuron_n is not 0"
-        self.data_key = data_dir.split("static")[-1].split(".")[0].replace("preproc", "").replace("_nobehavior", "")
+        self.data_key = (
+            data_dir.split("static")[-1]
+            .split(".")[0]
+            .replace("preproc", "")
+            .replace("_nobehavior", "")
+        )
 
         assert (
             include_behavior and select_input_channel
-        ) is False, "Selecting an Input Channel and Adding Behavior can not both be true"
-
+        ) is False, (
+            "Selecting an Input Channel and Adding Behavior can not both be true"
+        )
 
     def prepare_data(self):
         # we should not do anything like self.x = y # = assign state
         # just download the data
         path = pathlib.Path(self.data_dir)
-        
+
         if not path.exists():
-            print("We have to download and prepare the data.");
+            print("We have to download and prepare the data.")
             print("This might take a long time (~1 hour).")
-            print(f"Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.", file=sys.stderr)
+            print(
+                f"Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.",
+                file=sys.stderr,
+            )
             wget.download(self._URL)
 
-            print(f"\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.", file=sys.stderr)
+            print(
+                f"\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.",
+                file=sys.stderr,
+            )
             with zipfile.ZipFile("Lurz2020-master.zip", "r") as zip_ref:
                 zip_ref.extractall("tmp_lurz_extracted")
 
             pathlib.Path(self.data_dir).mkdir(parents=True)
 
-            print(f"Copying the temporarily unzipped folder to the specified path", file=sys.stderr)
-            copy_tree("./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0", str(path))
-            print(f"Removing the temporary folder and the downloaded .zip file.", file=sys.stderr)
+            print(
+                f"Copying the temporarily unzipped folder to the specified path",
+                file=sys.stderr,
+            )
+            copy_tree(
+                "./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0", str(path)
+            )
+            print(
+                f"Removing the temporary folder and the downloaded .zip file.",
+                file=sys.stderr,
+            )
             shutil.rmtree("tmp_lurz_extracted")
             os.remove("Lurz2020-master.zip")
-
 
     def setup(self, stage: Optional[str] = None):
         # stage is "fit" or "test" or "predict"
@@ -207,32 +235,44 @@ class LurzDataModule(pl.LightningDataModule):
         if self.neuron_n is not None:
             random_state = np.random.get_state()
             if self.neuron_base_seed is not None:
-                np.random.seed(self.neuron_base_seed * self.neuron_n)  # avoid nesting by making seed dependent on number of neurons
+                np.random.seed(
+                    self.neuron_base_seed * self.neuron_n
+                )  # avoid nesting by making seed dependent on number of neurons
             assert (
                 len(self.dat.neurons.unit_ids) >= self.exclude_neuron_n + self.neuron_n
-            ), "After excluding {} neurons, there are not {} neurons left".format(self.exclude_neuron_n, self.neuron_n)
-            self.neuron_ids = np.random.choice(self.dat.neurons.unit_ids, size=self.exclude_neuron_n + self.neuron_n, replace=False)[
-                self.exclude_neuron_n:
-            ]
+            ), "After excluding {} neurons, there are not {} neurons left".format(
+                self.exclude_neuron_n, self.neuron_n
+            )
+            self.neuron_ids = np.random.choice(
+                self.dat.neurons.unit_ids,
+                size=self.exclude_neuron_n + self.neuron_n,
+                replace=False,
+            )[self.exclude_neuron_n :]
             np.random.set_state(random_state)
         if self.neuron_ids is not None:
-            idx = [np.where(self.dat.neurons.unit_ids == unit_id)[0][0] for unit_id in self.neuron_ids]
+            idx = [
+                np.where(self.dat.neurons.unit_ids == unit_id)[0][0]
+                for unit_id in self.neuron_ids
+            ]
 
         # following lines all copied (but tensors don't go to cuda)
         # transforms .. ToTensor -> no Cuda as it handles the Trainer from Pytorch Lightning
         self.more_transforms = [Subsample(idx), ToTensor(cuda=False)]
         if self.normalize:
-            self.more_transforms.insert(0, NeuroNormalizer(self.dat, exclude=self.exclude))
+            self.more_transforms.insert(
+                0, NeuroNormalizer(self.dat, exclude=self.exclude)
+            )
 
         if self.include_behavior:
             self.more_transforms.insert(0, AddBehaviorAsChannels())
 
         if self.select_input_channel is not None:
-            self.more_transforms.insert(0, SelectInputChannel(self.select_input_channel))
-        
+            self.more_transforms.insert(
+                0, SelectInputChannel(self.select_input_channel)
+            )
+
         # add transforms to the dataset
         self.dat.transforms.extend(self.more_transforms)
-
 
         # These two lines changed
         # tier_array = dat.trial_info.tiers if file_tree else dat.tiers
@@ -250,33 +290,40 @@ class LurzDataModule(pl.LightningDataModule):
 
         # for creating the separate datasets, we choose ids and create a SubsetSampler
         # that samples the correct images
-        
-        # train, test and val datasets are later created based on 
+
+        # train, test and val datasets are later created based on
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None:
             subset_idx_train = None
             subset_idx_val = np.where(tier_array == "validation")[0]
-            
 
             if self.image_ids is not None:
-                subset_idx_train = [np.where(image_id_array == image_id)[0][0] for image_id in self.image_ids]
-                assert sum(tier_array[subset_idx_train] != "train") == 0, "image_ids contain validation or test images"
+                subset_idx_train = [
+                    np.where(image_id_array == image_id)[0][0]
+                    for image_id in self.image_ids
+                ]
+                assert (
+                    sum(tier_array[subset_idx_train] != "train") == 0
+                ), "image_ids contain validation or test images"
             elif self.image_n is not None:
                 random_state = np.random.get_state()
                 if self.image_base_seed is not None:
-                    np.random.seed(self.image_base_seed * self.image_n)  # avoid nesting by making seed dependent on number of images
-                subset_idx_train = np.random.choice(np.where(tier_array == "train")[0], size=self.image_n, replace=False)
+                    np.random.seed(
+                        self.image_base_seed * self.image_n
+                    )  # avoid nesting by making seed dependent on number of images
+                subset_idx_train = np.random.choice(
+                    np.where(tier_array == "train")[0], size=self.image_n, replace=False
+                )
                 np.random.set_state(random_state)
             else:
                 subset_idx_train = np.where(tier_array == "train")[0]
-            
 
             self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
             self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
-            
+
             self.val_sampler = SubsetSequentialSampler(subset_idx_val)
-        
+
         if stage == "test" or stage is None:
             subset_idx_test = np.where(tier_array == "test")[0]
             self.test_sampler = SubsetSequentialSampler(subset_idx_test)
@@ -288,17 +335,19 @@ class LurzDataModule(pl.LightningDataModule):
         return self.dat[0].responses.shape
 
     def get_mean_fast(self):
-        """ Computes the mean response of the validation dataset (much smaller than the train set) """
-        dataloader = DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size)
+        """Computes the mean response of the validation dataset (much smaller than the train set)"""
+        dataloader = DataLoader(
+            self.dat, sampler=self.val_sampler, batch_size=self.batch_size
+        )
         summed = torch.zeros(self.get_output_shape())
         for d in dataloader:
             summed += torch.sum(d.responses, 0)
 
         mean = summed / self.train_len()
         return mean
-    
+
     def get_mean(self):
-        """ Computes the mean response of the train dataset """
+        """Computes the mean response of the train dataset"""
 
         mean_path = pathlib.Path(self.data_dir + "/mean.npy")
 
@@ -307,7 +356,9 @@ class LurzDataModule(pl.LightningDataModule):
             print("Loaded precomputed mean from " + str(mean_path))
             return torch.from_numpy(mean)
 
-        dataloader = DataLoader(self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size)
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size
+        )
         summed = torch.zeros(self.get_output_shape())
         for d in dataloader:
             summed += torch.sum(d.responses, 0)
@@ -317,16 +368,16 @@ class LurzDataModule(pl.LightningDataModule):
         np.save(mean_path, mean)
         print("Created mean array to " + str(mean_path))
         return mean
-    
+
     def train_len(self):
         return len(self.train_random_sampler)
-    
+
     def val_len(self):
         return len(self.val_sampler)
-    
+
     def test_len(self):
         return len(self.test_sampler)
-    
+
     def __len__(self):
         """The length of ALL the data we have (train + val + test)"""
         return len(self.dat)
@@ -337,13 +388,15 @@ class LurzDataModule(pl.LightningDataModule):
         """
         print(" ------------ DATASET INFO ------------ ")
         print(" SHAPES:")
-        dataloader = DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size) 
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size
+        )
         print(f"    Input shape (images): {self.get_input_shape()}")
-        print("    With batch size also: ", end='')
+        print("    With batch size also: ", end="")
         print(next(iter(dataloader)).images.shape)
 
         print(f"    Output shape (responses): {self.get_output_shape()}")
-        print("    With batch size also: ", end='')
+        print("    With batch size also: ", end="")
         print(next(iter(dataloader)).responses.shape)
 
         print(" LENGTH:")
@@ -351,20 +404,36 @@ class LurzDataModule(pl.LightningDataModule):
         print(f"    Length of the train set is {self.train_len()}")
         print(f"    Length of the val set is {self.val_len()}")
         print(f"    Length of the test set is {self.test_len()}")
-        
+
         print(" -------------------------------------- ")
-        
 
     def train_dataloader(self):
-        return DataLoader(self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.dat,
+            sampler=self.train_random_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def val_dataloader(self):
-        return DataLoader(self.dat, sampler=self.val_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.dat,
+            sampler=self.val_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
     def test_dataloader(self):
-        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
 
-    def get_oracle_dataloader(self, toy_data=False, oracle_condition=None, verbose=False):
+    def get_oracle_dataloader(
+        self, toy_data=False, oracle_condition=None, verbose=False
+    ):
 
         if toy_data:
             condition_hashes = self.dat.info.condition_hash
@@ -397,23 +466,33 @@ class LurzDataModule(pl.LightningDataModule):
             else np.where((dat_tiers == "test") & (class_idx == oracle_condition))[0]
         )
         if (oracle_condition is not None) and verbose:
-            print("Created Testloader for image class {}".format(classes[oracle_condition]))
-
+            print(
+                "Created Testloader for image class {}".format(
+                    classes[oracle_condition]
+                )
+            )
 
         # IDENTIFIERS ARE WHERE THINGS ARE NOT UNIQUE
 
         sampler = RepeatsBatchSampler(identifiers, sampling_condition)
         return DataLoader(self.dat, batch_sampler=sampler)
 
-    
-    def get_correlations(self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs):
+    def get_correlations(
+        self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs
+    ):
         correlations = {}
         for k, v in dataloaders.items():
-            target, output = self.model_predictions(dataloader=v, model=model, data_key=k)
+            target, output = self.model_predictions(
+                dataloader=v, model=model, data_key=k
+            )
             correlations[k] = corr(target, output, axis=0, eps=1e-12)
 
             if np.any(np.isnan(correlations[k])):
-                print("{}% NaNs , NaNs will be set to Zero.".format(np.isnan(correlations[k]).mean() * 100))
+                print(
+                    "{}% NaNs , NaNs will be set to Zero.".format(
+                        np.isnan(correlations[k]).mean() * 100
+                    )
+                )
             correlations[k][np.isnan(correlations[k])] = 0
 
         if not as_dict:
@@ -424,7 +503,6 @@ class LurzDataModule(pl.LightningDataModule):
             )
         return correlations
 
-    
     def model_predictions(self, model, dataloader, data_key):
         """
         computes model predictions for a given dataloader and a model
@@ -443,20 +521,26 @@ class LurzDataModule(pl.LightningDataModule):
                 # the outputs and targets get concatenated into a veeeery long tensor
                 output = torch.cat((output, (model(images).detach().cpu())), dim=0)
                 target = torch.cat((target, responses.detach().cpu()), dim=0)
-        
+
         # on oracle dataloader returns both of shape (999, 5335), because 999 is test_len and 5335 is number_of_neurons
         # or for dm.val_dataloader() returns (522, 5335), where 522 is dm.val_len()
         return target.numpy(), output.numpy()
 
-
     def return_test_sampler(self, oracle_condition=None, get_key=False):
         print("Returning only test sampler with repeats...")
         dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
-        return (self.data_key, {"test": dataloader}) if get_key else {"test": dataloader}
+        return (
+            (self.data_key, {"test": dataloader}) if get_key else {"test": dataloader}
+        )
 
     def predict_dataloader(self):
-        return DataLoader(self.dat, sampler=self.test_sampler, batch_size=self.batch_size, num_workers=self.num_workers)
-    
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
     def model_performances(self, model=None, trainer=None):
         model.test_average_batch = False
         model.compute_oracle_fraction = False
@@ -468,6 +552,7 @@ class LurzDataModule(pl.LightningDataModule):
         test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader())
 
         from pprint import pprint
+
         print("val_score")
         pprint(val_score)
         print("test_score")
@@ -478,12 +563,9 @@ class LurzDataModule(pl.LightningDataModule):
 
 if __name__ == "__main__":
 
-    data_dir = 'data/lurz2020/static20457-5-9-preproc0'
-    dataset_config = {"data_dir": data_dir, 
-                      "batch_size": 10, 
-                      "normalize": True}
-                    #   "exclude": None}
-
+    data_dir = "data/lurz2020/static20457-5-9-preproc0"
+    dataset_config = {"data_dir": data_dir, "batch_size": 10, "normalize": True}
+    #   "exclude": None}
 
     dm = LurzDataModule(**dataset_config)
     dm.prepare_data()

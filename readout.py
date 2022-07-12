@@ -48,15 +48,25 @@ class Gaussian3dCyclic(readouts.Readout):
     ):
         super().__init__()
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma_range <= 0.0:
-            raise ValueError("init_mu_range or init_sigma_range is not within required limit!")
+            raise ValueError(
+                "init_mu_range or init_sigma_range is not within required limit!"
+            )
         self.in_shape = in_shape
         self.outdims = outdims
-        self.feature_reg_weight = self.resolve_deprecated_gamma_readout(feature_reg_weight, gamma_readout)
+        self.feature_reg_weight = self.resolve_deprecated_gamma_readout(
+            feature_reg_weight, gamma_readout
+        )
         self.batch_sample = batch_sample
         self.grid_shape = (1, 1, outdims, 1, 3)
-        self.mu = Parameter(torch.Tensor(*self.grid_shape))  # mean location of gaussian for each neuron
-        self.sigma = Parameter(torch.Tensor(*self.grid_shape))  # standard deviation for gaussian for each neuron
-        self.features = Parameter(torch.Tensor(1, 1, 1, outdims))  # saliency weights for each channel from core
+        self.mu = Parameter(
+            torch.Tensor(*self.grid_shape)
+        )  # mean location of gaussian for each neuron
+        self.sigma = Parameter(
+            torch.Tensor(*self.grid_shape)
+        )  # standard deviation for gaussian for each neuron
+        self.features = Parameter(
+            torch.Tensor(1, 1, 1, outdims)
+        )  # saliency weights for each channel from core
         self.mean_activity = mean_activity
         if bias:
             bias = Parameter(torch.Tensor(outdims))
@@ -83,7 +93,7 @@ class Gaussian3dCyclic(readouts.Readout):
 
         # We won't clamp it to the interval [-1, 1]
         with torch.no_grad():
-        #     self.mu.clamp_(min=-1, max=1)  # at eval time, only self.mu is used so it must belong to [-1,1]
+            #     self.mu.clamp_(min=-1, max=1)  # at eval time, only self.mu is used so it must belong to [-1,1]
             self.sigma.clamp_(min=0)  # sigma/variance is always a positive quantity
 
         grid_shape = (batch_size,) + self.grid_shape[1:]
@@ -93,7 +103,9 @@ class Gaussian3dCyclic(readouts.Readout):
         if sample:
             norm = self.mu.new(*grid_shape).normal_()
         else:
-            norm = self.mu.new(*grid_shape).zero_()  # for consistency and CUDA capability
+            norm = self.mu.new(
+                *grid_shape
+            ).zero_()  # for consistency and CUDA capability
 
         corrected_distribution = norm * self.sigma + self.mu
 
@@ -104,11 +116,11 @@ class Gaussian3dCyclic(readouts.Readout):
         all_periodic = torch.remainder((corrected_distribution + 1), 2) - 1
 
         # we clamp everything into the [-1, 1] interval
-        all_clamped = torch.clamp(corrected_distribution , min=-1, max=1)
+        all_clamped = torch.clamp(corrected_distribution, min=-1, max=1)
 
         # but we want to clamp only x and y dimensions and not z (channel) dimension,
         # therefore in all_clamped we replace clamped channels by periodic channels
-        all_clamped[:,:,:,:,2] = all_periodic[:,:,:,:,2]
+        all_clamped[:, :, :, :, 2] = all_periodic[:, :, :, :, 2]
 
         return all_clamped
 
@@ -131,7 +143,7 @@ class Gaussian3dCyclic(readouts.Readout):
         self.features.data.fill_(1 / self.in_shape[0])
         if self.bias is not None:
             self.initialize_bias(mean_activity=mean_activity)
-    
+
     def regularizer(self, reduction="sum", average=None):
         return 0
 
@@ -155,12 +167,18 @@ class Gaussian3dCyclic(readouts.Readout):
         N, c, w, h = x.size()
         c_in, w_in, h_in = self.in_shape
         if (c_in, w_in, h_in) != (c, w, h):
-            raise ValueError("the specified feature map dimension is not the readout's expected input dimension")
-        
+            raise ValueError(
+                "the specified feature map dimension is not the readout's expected input dimension"
+            )
+
         # we copy the first channel to the end to make it periodic
-        with_copied_first_orientation = torch.cat([x, x[:, 0, :, :].view(N, 1, w, h)], dim=1)
-        
-        with_copied_first_orientation = with_copied_first_orientation.view(N, 1, c+1, w, h)
+        with_copied_first_orientation = torch.cat(
+            [x, x[:, 0, :, :].view(N, 1, w, h)], dim=1
+        )
+
+        with_copied_first_orientation = with_copied_first_orientation.view(
+            N, 1, c + 1, w, h
+        )
 
         feat = self.features
         bias = self.bias
@@ -168,11 +186,15 @@ class Gaussian3dCyclic(readouts.Readout):
 
         if self.batch_sample:
             # sample the grid_locations separately per image per batch
-            grid = self.sample_grid(batch_size=N, sample=sample)  # sample determines sampling from Gaussian
+            grid = self.sample_grid(
+                batch_size=N, sample=sample
+            )  # sample determines sampling from Gaussian
         else:
             # use one sampled grid_locations for all images in the batch
-            grid = self.sample_grid(batch_size=1, sample=sample).expand(N, outdims, 1, 3)
-        
+            grid = self.sample_grid(batch_size=1, sample=sample).expand(
+                N, outdims, 1, 3
+            )
+
         if out_idx is not None:
             # out_idx specifies the indices to subset of neurons for training/testing
             if isinstance(out_idx, np.ndarray):
@@ -191,7 +213,13 @@ class Gaussian3dCyclic(readouts.Readout):
         #  - align_corners=True, because we need to have -1 as the center of the
         #    orientation 0 and value 1 mapped to the center of (again) orientation
         #    0, but it is copied at the end
-        y = F.grid_sample(with_copied_first_orientation, grid, align_corners=True, padding_mode="border", mode="bilinear")
+        y = F.grid_sample(
+            with_copied_first_orientation,
+            grid,
+            align_corners=True,
+            padding_mode="border",
+            mode="bilinear",
+        )
 
         # reshapes to a better shape
         y = (y.squeeze(-1) * feat).sum(1).view(N, outdims)
@@ -199,4 +227,3 @@ class Gaussian3dCyclic(readouts.Readout):
         if self.bias is not None:
             y = y + bias
         return y
-

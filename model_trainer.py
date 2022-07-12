@@ -14,8 +14,11 @@ from pprint import pprint
 from Antolik_dataset import AntolikDataModule
 
 
-def get_best_model(wandb_run, model_class=reCNN_bottleneck_CyclicGauss3d, model_artifact_name="reCNN_bottleneck_CyclicGauss3d"):
-
+def get_best_model(
+    wandb_run,
+    model_class=reCNN_bottleneck_CyclicGauss3d,
+    model_artifact_name="reCNN_bottleneck_CyclicGauss3d",
+):
 
     if model_artifact_name == None:
         model_artifact_name = model_class.__str__()
@@ -30,21 +33,22 @@ def get_best_model(wandb_run, model_class=reCNN_bottleneck_CyclicGauss3d, model_
 
 def Lurz_dataset_preparation_function(config, run=None):
     """
-        Gets config, can edit it.
-        Returns Pytorch Lightning DataModule
+    Gets config, can edit it.
+    Returns Pytorch Lightning DataModule
     """
     # setup datamodule - use artifact
-    data_dir = 'data/lurz2020/static20457-5-9-preproc0'
-    
+    data_dir = "data/lurz2020/static20457-5-9-preproc0"
+
     if run is not None:
         dataset_artifact = run.use_artifact(config["dataset_artifact_name"])
         data_dir = dataset_artifact.download()
 
-    dataset_config = {"data_dir": data_dir, 
-                      "batch_size": config["batch_size"], 
-                      "normalize": True,
-                      "exclude": "images"}
-
+    dataset_config = {
+        "data_dir": data_dir,
+        "batch_size": config["batch_size"],
+        "normalize": True,
+        "exclude": "images",
+    }
 
     dm = LurzDataModule(**dataset_config)
     dm.prepare_data()
@@ -63,21 +67,23 @@ def Lurz_dataset_preparation_function(config, run=None):
 
     return dm
 
+
 def Antolik_dataset_preparation_function_test(config, run=None):
     """
-        Gets config, can edit it.
-        Returns Pytorch Lightning DataModule
+    Gets config, can edit it.
+    Returns Pytorch Lightning DataModule
     """
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
     path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
 
-    dataset_config = {"train_data_dir": path_test, 
-                      "test_data_dir": path_test, 
-                      "batch_size": config["batch_size"], 
-                      "normalize": True, 
-                      "val_size":500,}
-
+    dataset_config = {
+        "train_data_dir": path_test,
+        "test_data_dir": path_test,
+        "batch_size": config["batch_size"],
+        "normalize": True,
+        "val_size": 500,
+    }
 
     if run is not None:
         raise NotImplementedError()
@@ -93,7 +99,7 @@ def Antolik_dataset_preparation_function_test(config, run=None):
             "input_size_x": dm.get_input_shape()[1],
             "input_size_y": dm.get_input_shape()[2],
             "num_neurons": dm.get_output_shape()[0],
-            "mean_activity": dm.get_mean(), 
+            "mean_activity": dm.get_mean(),
         }
     )
 
@@ -102,19 +108,20 @@ def Antolik_dataset_preparation_function_test(config, run=None):
 
 def Antolik_dataset_preparation_function(config, run=None):
     """
-        Gets config, can edit it.
-        Returns Pytorch Lightning DataModule
+    Gets config, can edit it.
+    Returns Pytorch Lightning DataModule
     """
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
     path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
 
-    dataset_config = {"train_data_dir": path_train, 
-                      "test_data_dir": path_test, 
-                      "batch_size": config["batch_size"], 
-                      "normalize": True, 
-                      "val_size":5000,}
-
+    dataset_config = {
+        "train_data_dir": path_train,
+        "test_data_dir": path_test,
+        "batch_size": config["batch_size"],
+        "normalize": True,
+        "val_size": 5000,
+    }
 
     if run is not None:
         raise NotImplementedError()
@@ -130,25 +137,26 @@ def Antolik_dataset_preparation_function(config, run=None):
             "input_size_x": dm.get_input_shape()[1],
             "input_size_y": dm.get_input_shape()[2],
             "num_neurons": dm.get_output_shape()[0],
-            "mean_activity": dm.get_mean(), 
+            "mean_activity": dm.get_mean(),
         }
     )
 
     return dm
 
+
 def run_wandb_training(
-        config,
-        dataset_preparation_function,
-        entity, 
-        project,
-        model_artifact_name = None, 
-        model_class=reCNN_FullFactorized, 
-        early_stopping_monitor="val/corr", 
-        early_stopping_mode="max", 
-        model_checkpoint_monitor="val/corr", 
-        model_checkpoint_mode="max",
-        # **config, 
-        ):
+    config,
+    dataset_preparation_function,
+    entity,
+    project,
+    model_artifact_name=None,
+    model_class=reCNN_FullFactorized,
+    early_stopping_monitor="val/corr",
+    early_stopping_mode="max",
+    model_checkpoint_monitor="val/corr",
+    model_checkpoint_mode="max",
+    # **config,
+):
 
     pl.seed_everything(config["seed"], workers=True)
 
@@ -175,17 +183,21 @@ def run_wandb_training(
     wandb_logger.watch(model, log="all", log_freq=250)
 
     # define callbacks for the training
-    early_stop = EarlyStopping(monitor=early_stopping_monitor, patience=config["patience"], mode=early_stopping_mode)
-    checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode)
+    early_stop = EarlyStopping(
+        monitor=early_stopping_monitor,
+        patience=config["patience"],
+        mode=early_stopping_mode,
+    )
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
+    )
 
     class LitProgressBar(ProgressBar):
-
         def get_metrics(self, trainer, model):
             # don't show the version number
             items = super().get_metrics(trainer, model)
             items.pop("v_num", None)
             return items
-
 
     bar = LitProgressBar()
 
@@ -214,22 +226,30 @@ def run_wandb_training(
             val_dataloaders=dm.val_dataloader(),
         )
 
-    best_observed_val_metric = checkpoint_callback.best_model_score.cpu().detach().numpy()
-    print("Best model's " + config["observed_val_metric"] + ": " + str(best_observed_val_metric))
-    
+    best_observed_val_metric = (
+        checkpoint_callback.best_model_score.cpu().detach().numpy()
+    )
+    print(
+        "Best model's "
+        + config["observed_val_metric"]
+        + ": "
+        + str(best_observed_val_metric)
+    )
+
     if model_artifact_name == None:
         model_artifact_name = model.__str__()
-    
+
     # add best corr to metadata
     metadata = config | {"best_model_score": best_observed_val_metric}
 
     # add model artifact
-    best_model_artifact = wandb.Artifact(model_artifact_name, type="model",
-        metadata=metadata)
+    best_model_artifact = wandb.Artifact(
+        model_artifact_name, type="model", metadata=metadata
+    )
     best_model_artifact.add_file(checkpoint_callback.best_model_path)
     run.log_artifact(best_model_artifact)
 
-    # say to wandb that the best val/corr of the model is the best one 
+    # say to wandb that the best val/corr of the model is the best one
     # and not the last one!! (it is the default behavour!!)
     run.summary[config["observed_val_metric"]] = best_observed_val_metric
 
@@ -239,9 +259,9 @@ def run_wandb_training(
 
     if config["test"]:
         dm.model_performances(model, trainer)
-        
+
         # result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
         #     metadata=results[0])
         # run.log_artifact(result_artifact)
-    
+
     return model

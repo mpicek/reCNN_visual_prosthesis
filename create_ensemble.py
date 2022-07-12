@@ -22,7 +22,7 @@ config = {
     "conservative_oracle": True,
     "jackknife_oracle": True,
     "generate_oracle_figure": False,
-    "batch_size": 10
+    "batch_size": 10,
 }
 
 run = wandb.init(project="reCNN_visual_prosthesis", entity="csng-cuni")
@@ -38,9 +38,7 @@ artifact_names = [
 artifact_dir = None
 
 for a_name in artifact_names:
-    artifact = run.use_artifact(
-        a_name, type="model"
-    )
+    artifact = run.use_artifact(a_name, type="model")
     artifact_dir = artifact.download()
 
 print(artifact_dir)
@@ -53,10 +51,12 @@ for path in models_paths_list:
     list_of_models.append(m)
     print(f"Model from {path} loaded!")
 
+
 class AggregateModel(ExtendedEncodingModel):
     def __init__(self, models_list, config):
         super().__init__(**config)
         self.models = nn.ModuleList(models_list)
+
     def forward(self, x):
         x = torch.mean(torch.stack([m(x) for m in self.models], -1), dim=-1)
         return x
@@ -68,6 +68,5 @@ model = AggregateModel(list_of_models, config)
 dm = Antolik_dataset_preparation_function_test(config, None)
 
 wandb_logger = WandbLogger(log_model=True)
-trainer = pl.Trainer(gpus=[0],logger=wandb_logger)
+trainer = pl.Trainer(gpus=[0], logger=wandb_logger)
 dm.model_performances(m, trainer)
-
