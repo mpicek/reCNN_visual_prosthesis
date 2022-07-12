@@ -83,7 +83,7 @@ class LurzDataModule(pl.LightningDataModule):
 
     In this code, there are comments that explain, what exactly was changed.
     The code was updated to work with neuralpredictors version 0.2.0, Lurz's code
-    did not work with this version (it worked with 0.0.3 version)
+    did not work with this version (it worked with 0.0.3 version which is too low)
 
     This class is an implementation of PyTorch Lightning LightningDataModule,
     so that we can use PyTorch Lightning.
@@ -241,9 +241,7 @@ class LurzDataModule(pl.LightningDataModule):
         tier_array = self.dat.trial_info.tiers
         image_id_array = self.dat.trial_info.frame_image_id
 
-
         # no return of test_sampler (deleted)
-
 
         # the rest of this method was altered a little bit just because of the
         # previous decisions - there are no "tiers", we create train, val test

@@ -67,8 +67,6 @@ class Gaussian3dCyclic(readouts.Readout):
         self.init_mu_range = init_mu_range
         self.init_sigma_range = init_sigma_range
         self.fixed_sigma = fixed_sigma
-        print(self.fixed_sigma)
-        print(self.init_sigma_range)
         self.initialize(mean_activity)
 
     def sample_grid(self, batch_size, sample=None):
@@ -135,7 +133,7 @@ class Gaussian3dCyclic(readouts.Readout):
             self.initialize_bias(mean_activity=mean_activity)
     
     def regularizer(self, reduction="sum", average=None):
-        return 0 #TODO
+        return 0
 
     def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs):
         """

@@ -3,8 +3,6 @@
 Runs specified commands or creates an ensamble.
 """
 
-import sys
-import os
 import argparse
 import subprocess
 import yaml
@@ -13,8 +11,7 @@ def parse(filename):
     """
     Parses the commands from a file:
         - ignores # (=comments) 
-        - each command has to be separated either by a newline (at least one) 
-        or # (a comment)
+        - each command has to be separated either by a newline (at least one) or # (a comment)
     
     Returns:
         List of commands to be run.

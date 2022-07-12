@@ -42,8 +42,8 @@ def Lurz_dataset_preparation_function(config, run=None):
 
     dataset_config = {"data_dir": data_dir, 
                       "batch_size": config["batch_size"], 
-                      "normalize": True}
-                    #   "exclude": None}
+                      "normalize": True,
+                      "exclude": "images"}
 
 
     dm = LurzDataModule(**dataset_config)
