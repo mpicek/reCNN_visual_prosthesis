@@ -6,9 +6,9 @@
 
 # DEFINE RESOURCES:
 #PBS -N qsub_script
-#PBS -l select=1:ncpus=8:ngpus=1:mem=20gb:scratch_local=100gb:gpu_cap=^cuda80
+#PBS -l select=1:ncpus=16:ngpus=1:mem=72gb:scratch_local=100gb:gpu_cap=^cuda80:cluster=^glados:cl_zubat=False
 #PBS -q gpu
-#PBS -l walltime=12:00:00
+#PBS -l walltime=24:00:00
 
 # Directory I use as a main storage
 DATADIR="/storage/budejovice1/home/$(whoami)"
@@ -20,7 +20,6 @@ test -n "$SCRATCHDIR" || { echo >&2 "Variable SCRATCHDIR is not set!"; exit 1; }
 chmod 700 $SCRATCHDIR
 mkdir $SCRATCHDIR/tmp
 export SINGULARITY_TMPDIR=$SCRATCHDIR/tmp
-
 
 cd $SCRATCHDIR
 

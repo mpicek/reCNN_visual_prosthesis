@@ -674,7 +674,10 @@ class Lurz_Baseline(ExtendedEncodingModel):
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
+        # self.loss = PoissonLoss(avg=True)
+        # self.corr = Corr()
         self.nonlinearity = self.config["nonlinearity"]
+        
 
         self.core = cores.SE2dCore(
             stride=self.config["stride"],
@@ -684,25 +687,25 @@ class Lurz_Baseline(ExtendedEncodingModel):
             input_kern=self.config["core_input_kern"],
             hidden_kern=self.config["core_hidden_kern"],
             layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],  # 0
-            gamma_hidden=config["core_gamma_hidden"],  # 0
+            gamma_input=config["core_gamma_input"], # 0
+            gamma_hidden=config["core_gamma_hidden"], # 0
             stack=config["stack"],
             depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
+            use_avg_reg=config["use_avg_reg"]
         )
 
-        self.readout = readouts.FullFactorized2d(
-            in_shape=(
-                self.config["core_hidden_channels"]
-                * self.config["num_rotations"]
-                * abs(self.config["stack"]),
-                self.config["input_size_x"],
+        
+        self.readout = readouts.FullGaussian2d(
+            in_shape=( #TODO: stack???
+                #TODO: ten shape si potvrdit
+                self.config["core_hidden_channels"] * abs(self.config["stack"]),
+                self.config["input_size_x"], # ocividne se to padduje, takze to neztraci rozmery
                 self.config["input_size_y"],
             ),
             outdims=self.config["num_neurons"],
             bias=self.config["readout_bias"],
             mean_activity=self.config["mean_activity"],
-            spatial_and_feature_reg_weight=self.config["readout_gamma"],
+            feature_reg_weight=self.config["readout_gamma"],
         )
 
         self.register_buffer("laplace", torch.from_numpy(laplace()))
@@ -712,13 +715,23 @@ class Lurz_Baseline(ExtendedEncodingModel):
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
-
+    
     def __str__(self):
-        return "Stacked_FullGaussian2d"
+        return "StackedCore_FullGaussian2d"
+    
+
+    def reg_readout_group_sparsity(self):
+        nw = self.readout.features.reshape(self.config["num_neurons"], -1)
+        reg_term = self.config["reg_group_sparsity"] * torch.sum(
+            torch.sqrt(torch.sum(torch.pow(nw, 2), dim=-1)), 0
+        )
+        return reg_term
 
     def regularization(self):
+
         readout_l1_reg = self.readout.regularizer(reduction="mean")
         self.log("reg/readout_l1_reg", readout_l1_reg)
+
         readout_reg = readout_l1_reg
         core_reg = self.core.regularizer()
         reg_term = readout_reg + core_reg

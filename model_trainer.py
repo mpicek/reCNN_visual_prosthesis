@@ -71,6 +71,8 @@ def Lurz_dataset_preparation_function(config, run=None):
 def Antolik_dataset_preparation_function_test(config, run=None):
     """
     Gets config, can edit it.
+    Uses only test dataset (for both train and test), therefore
+        the loading is much quicker.
     Returns Pytorch Lightning DataModule
     """
 

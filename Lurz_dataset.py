@@ -541,25 +541,41 @@ class LurzDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
-    def model_performances(self, model=None, trainer=None):
+    def model_performances(self, model=None, trainer=None, control_measures=None):
         model.test_average_batch = False
         model.compute_oracle_fraction = False
-        val_score = trainer.test(model, self.val_dataloader())
-        test_score = trainer.test(model, self.test_dataloader())
+        val_score = trainer.test(model, self.val_dataloader(), verbose=False)
+        test_score = trainer.test(model, self.test_dataloader(), verbose=False)
 
         model.test_average_batch = True
         model.compute_oracle_fraction = True
-        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader())
+        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
 
-        from pprint import pprint
+        val_score = val_score[0]
+        test_score = test_score[0]
+        test_repeats_averaged_score = test_repeats_averaged_score[0]
 
-        print("val_score")
-        pprint(val_score)
-        print("test_score")
-        pprint(test_score)
-        print("test_repeats_averaged_score")
-        pprint(test_repeats_averaged_score)
+        print("Validation dataset:")
+        print(f"    Correlation: {'{:.4f}'.format(val_score['test/corr'])} {'({:.2f} percent of the control model)'.format(100 * (val_score['test/corr'] / control_measures['val/corr'])) if control_measures else ''}")
 
+
+        # print("Test dataset:")
+        # print(f"    Correlation: {'{:.4f}'.format(test_score['test/corr']) }")
+
+        print("Test dataset with averaged responses of repeated trials:")
+        print(f"    Correlation: {'{:.4f}'.format(test_repeats_averaged_score['test/repeated_trials/corr']) } {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/repeated_trials/corr'] / control_measures['test/repeated_trials/corr'])) if control_measures else ''}")
+        print(f"    Fraction oracle conservative: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_conservative'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_conservative'] / control_measures['test/fraction_oracle_conservative'])) if control_measures else ''}")
+        print(f"    Fraction oracle jackknife: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_jackknife'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_jackknife'] / control_measures['test/fraction_oracle_jackknife'])) if control_measures else ''}")
+
+        returned_measures = {
+            "val/corr": val_score['test/corr'],
+            "test/repeated_trials/corr": test_repeats_averaged_score['test/repeated_trials/corr'],
+            "test/fraction_oracle_conservative":test_repeats_averaged_score['test/fraction_oracle_conservative'],
+            "test/fraction_oracle_jackknife":test_repeats_averaged_score['test/fraction_oracle_jackknife']
+        }
+
+        return returned_measures
+        
 
 if __name__ == "__main__":
 

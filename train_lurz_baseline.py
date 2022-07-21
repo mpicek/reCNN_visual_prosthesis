@@ -1,5 +1,5 @@
 from model_trainer import run_wandb_training
-from models import reCNN_bottleneck_CyclicGauss3d
+from models import Lurz_Baseline
 from model_trainer import Lurz_dataset_preparation_function
 
 
@@ -8,22 +8,21 @@ PROJECT = "reCNN_visual_prosthesis"
 
 model = None
 
-
 config = {
     # GENERAL
     "seed": 42,
     "batch_size": 10,
-    "lr": 0.001,
+    "lr": 0.0001,
     "max_epochs": 500,
     # CORE GENERAL CONFIG
-    "core_hidden_channels": 16,
+    "core_hidden_channels": 8,
     "core_layers": 5,
-    "core_input_kern": 11,
-    "core_hidden_kern": 13,
+    "core_input_kern": 7,
+    "core_hidden_kern": 9,
     # ROTATION EQUIVARIANCE CORE CONFIG
-    "num_rotations": 24,
+    "num_rotations": 8,
     "stride": 1,
-    "upsampling": 1,
+    "upsampling": 2,
     "rot_eq_batch_norm": True,
     "stack": -1,
     "depth_separable": True,
@@ -31,8 +30,8 @@ config = {
     "readout_bias": True,
     "nonlinearity": "softplus",
     # REGULARIZATION
-    "core_gamma_input": 0.1006174251418264 ,
-    "core_gamma_hidden": 0.03675049359684497 ,
+    "core_gamma_input": 0.00307424496692959,
+    "core_gamma_hidden": 0.28463619129195233,
     "readout_gamma": 0.17,
     "input_regularizer": "LaplaceL2norm",  # for RotEqCore - default
     "use_avg_reg": True,
@@ -53,11 +52,12 @@ config = {
     "region": "region1",
     "dataset_artifact_name": "Lurz_dataset:latest",
     # BOTTLENECK
-    "bottleneck_kernel": 11,
+    "bottleneck_kernel": 15,
     # "fixed_sigma": False,
     "fixed_sigma": True,
-    "init_mu_range": 0.4,
-    "init_sigma_range": 0.4,
+    "init_mu_range": 0.5,
+    "init_sigma_range": 0.5,
+    "exclude": "images",
 }
 
 
