@@ -1,6 +1,6 @@
 # Rotation-equivariant convolutional neural network for design of visual prosthetic stimulation protocol
 
-My bachelor thesis supervised by Luca Baroni and Ján Antolík
+The code for Martin Picek's bachelor thesis supervised by Luca Baroni and Ján Antolík
 
 To clone the repository:
 ```bash
@@ -12,7 +12,7 @@ Bachelor thesis is in [this github repo](https://github.com/mpicek/bachelor_thes
 ## Running the network
 
 Use a Docker image from [this repository](https://github.com/mpicek/csng_dl_docker_image).
-It can be obtainde from the Docker Hub [here](https://hub.docker.com/repository/docker/picekma/csng_docker_dl/general) - more on instalation in the previous repository.
+It can be obtained from the Docker Hub [here](https://hub.docker.com/repository/docker/picekma/csng_docker_dl/general) - more on instalation in the previous repository.
 
 Run the image locally:
 ```
@@ -20,19 +20,24 @@ docker run --gpus all -it --rm -v local_dir:$(pwd) picekma/csng_docker_dl:0.1
 ```
 Or on MetaCentrum:
 ```
-singularity shell --nv -B $SCRATCHDIR /storage/brno2/home/mpicek/csng_dl_docker_image/image.img
+singularity shell --nv -B $SCRATCHDIR /path/to/the/image.img
 ```
 where you have to specify your path to a builded Singularity container. The build is
 described in the repository with the Docker file.
 
-In the container, write `source activate csng-dl` in order to activate conda environment.
+In the container, execute `source activate csng-dl` in order to activate conda environment.
 
-Then run `python simple_train_picek.py`, the network starts a training.
+Then run `python train_on_lurz.py`, the network starts a training.
 
+## Run the network
+
+Run `python final_network_lurz.py` or `python final_network_antolik.py` based on
+the dataset on which the network was trained. Ensemble networks are also run in
+these scripts.
 
 ## Creating and running a sweep
 
-Connect to a MetaCentrum, clone this repository, build a Singularity image
+Connect to MetaCentrum, clone this repository, build a Singularity image
 of the docker image provided by us (previous section) and specify the path
 to this image in `metacentrum/qsub_script.sh` as well as path to this repository.
 
