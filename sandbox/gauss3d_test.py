@@ -1,5 +1,5 @@
 from models import Gaussian3dCyclic
-from simple_train_picek import config
+from train_on_lurz import config
 import torch
 # from Lurz_dataset import LurzDataModule
 import numpy as np
@@ -53,7 +53,7 @@ print(a)
 # dm = Lurz_dataset_preparation_function(config)
 
 # ############ WARNING ############
-# # THE RotEqBottleneckGauss NEEDS TO HAVE THIS FORWARD FUNCTION:
+# # THE reCNN_bottleneck_Gauss2d NEEDS TO HAVE THIS FORWARD FUNCTION:
 #     # def forward(self, x):
 #     #     x = self.core(x)
 #     #     return x
@@ -71,7 +71,7 @@ print(a)
 # config.update({"core_hidden_channels": 3})
 # config.update({"batch_size": 1})
 
-# model = RotEqBottleneckTest_NoGauss(**config)
+# model = reCNN_bottleneck_NoReadout(**config)
 
 # print("===========================================================")
 # print(model.core.outchannels)

@@ -8,7 +8,7 @@ data_dir = 'data/lurz2020/static20457-5-9-preproc0'
 dataset_config = {"data_dir": data_dir, 
                       "batch_size": 10, 
                       "normalize": True, 
-                      "exclude": "images"}
+                      "exclude": None}
 dm = LurzDataModule(**dataset_config)
 dm.prepare_data()
 dm.setup()

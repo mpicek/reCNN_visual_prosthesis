@@ -3,14 +3,14 @@ from model_trainer import (
     Lurz_dataset_preparation_function,
     run_wandb_training,
 )
-from models import encoding_model_fixed, encoding_model
+from models import ExtendedEncodingModel, encoding_model
 import wandb
 import glob
 import torch.nn as nn
 import torch
 from Lurz_dataset import LurzDataModule
 import pytorch_lightning as pl
-from models import RotEqBottleneckGauss3dCyclic
+from models import reCNN_bottleneck_CyclicGauss3d
 import numpy as np
 from pytorch_lightning.loggers import WandbLogger
 run = wandb.init(project="reCNN_visual_prosthesis", entity="csng-cuni")
@@ -26,7 +26,7 @@ artifact = run.use_artifact(
 config = {
     # GENERAL
     "seed": 24,
-    "data_name": "PicekModel",
+    "data_name": "reCNNModel",
     "batch_size": 10,
     "lr": 0.001,
     "max_epochs": 500,
@@ -41,7 +41,7 @@ config = {
     "upsampling": 1,
     "rot_eq_batch_norm": True,
     "stack": -1,
-    "depth_separable": True,  # default ... TODO
+    "depth_separable": True,
     # READOUT CONFIG
     "readout_bias": True,
     "nonlinearity": "softplus",
@@ -76,7 +76,7 @@ print(artifact_dir)
 models_paths_list = glob.glob(artifact_dir + "/*.ckpt")
 m = None
 for path in models_paths_list:
-    m = RotEqBottleneckGauss3dCyclic.load_from_checkpoint(path)
+    m = reCNN_bottleneck_CyclicGauss3d.load_from_checkpoint(path)
     m.freeze()
     print(f"Model from {path} loaded!")
 
