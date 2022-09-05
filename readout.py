@@ -79,7 +79,7 @@ class Gaussian3dCyclic(readouts.Readout):
         self.fixed_sigma = fixed_sigma
         self.initialize(mean_activity)
 
-    def sample_grid(self, batch_size, sample=None):
+    def sample_grid(self, batch_size, sample=None): # significantly edited
         """
         Returns the grid locations from the core by sampling from a Gaussian distribution
         Args:
@@ -147,7 +147,7 @@ class Gaussian3dCyclic(readouts.Readout):
     def regularizer(self, reduction="sum", average=None):
         return 0
 
-    def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs):
+    def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs): # edited
         """
         Propagates the input forwards through the readout
         Args:

@@ -29,11 +29,9 @@ In the container, execute `source activate csng-dl` in order to activate conda e
 
 Then run `python train_on_lurz.py`, the network starts a training.
 
-## Run the network
+## Run the best models
 
-Run `python final_network_lurz.py` or `python final_network_antolik.py` based on
-the dataset on which the network was trained. Ensemble networks are also run in
-these scripts.
+To run the best models and see the results, run `python results.py`.
 
 ## Creating and running a sweep
 

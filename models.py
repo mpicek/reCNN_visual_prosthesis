@@ -29,7 +29,7 @@ class ExtendedEncodingModel(encoding_model):
 
     In config:
         - test_average_batch: whether to average responses in batches when computing
-            the test set correlation (used in repeated trials to cancle the neural variability)
+            the test set correlation (used in repeated trials to cancel the neural variability)
         - compute_oracle_fraction: whether to compute oracle fraction or not
         - conservative_oracle: whether to compute conservative oracle or not
         - jackknife_oracle: whether to compute jackknife oracle or not
@@ -570,7 +570,17 @@ class LurzReimplementation(ExtendedEncodingModel):
 
 
 class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
-    """Lurz's model with RotEq core, bottleneck at the end and also a gauss readout"""
+    """
+        The main model of this repository.
+        This model consists of:
+            - a core with reCNN architecture with a bottleneck in the last layer
+              to return only one scalar value for each position and orientation
+              (meaning that the number of channels in the last layer is limited
+              to 1)
+            - a readout which is a Gaussian 3d readout but modified in a way
+              that ensures that the third dimension (= orientation dimension)
+              is periodic
+    """
 
     def __init__(self, **config):
         super().__init__(**config)

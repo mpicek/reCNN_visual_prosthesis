@@ -33,8 +33,8 @@ def get_best_model(
 
 def Lurz_dataset_preparation_function(config, run=None):
     """
-    Gets config, can edit it.
-    Returns Pytorch Lightning DataModule
+        Gets config, can edit it.
+        Returns Pytorch Lightning DataModule of the dataset from Lurz's publication
     """
     # setup datamodule - use artifact
     data_dir = "data/lurz2020/static20457-5-9-preproc0"
@@ -70,10 +70,10 @@ def Lurz_dataset_preparation_function(config, run=None):
 
 def Antolik_dataset_preparation_function_test(config, run=None):
     """
-    Gets config, can edit it.
-    Uses only test dataset (for both train and test), therefore
-        the loading is much quicker.
-    Returns Pytorch Lightning DataModule
+        Gets config, can edit it.
+        Uses only Antolik's in-silico test dataset (for both train and test), therefore
+            the loading is much quicker.
+        Returns Pytorch Lightning DataModule
     """
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
@@ -110,8 +110,8 @@ def Antolik_dataset_preparation_function_test(config, run=None):
 
 def Antolik_dataset_preparation_function(config, run=None):
     """
-    Gets config, can edit it.
-    Returns Pytorch Lightning DataModule
+        Gets config, can edit it.
+        Returns Pytorch Lightning DataModule of the Antolik's in-silico dataset
     """
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
@@ -159,6 +159,11 @@ def run_wandb_training(
     model_checkpoint_mode="max",
     # **config,
 ):
+    """
+        Sets up a dataset and a model, sets up wandb session and runs a model
+        training with the help of Wandb. Subsequently it evaluates the model
+        and prints the results.
+    """
 
     pl.seed_everything(config["seed"], workers=True)
 
@@ -203,7 +208,7 @@ def run_wandb_training(
 
     bar = LitProgressBar()
 
-    # define trainer
+    # define the trainer
     trainer = pl.Trainer(
         callbacks=[early_stop, checkpoint_callback, bar],
         max_epochs=config["max_epochs"],

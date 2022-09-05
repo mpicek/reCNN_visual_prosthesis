@@ -16,6 +16,10 @@ from pytorch_lightning.loggers import WandbLogger
 
 
 class AggregateModel(ExtendedEncodingModel):
+    """
+        A class that servers as an aggregator of all the models in the ensemble.
+        The mean of the aggregated models is returned as an output of the ensemble model.
+    """
     def __init__(self, models_list, config):
         super().__init__(**config)
         self.models = nn.ModuleList(models_list)
@@ -44,7 +48,7 @@ def download_model(model_name, run):
 
 def download_control_model(model_name, run):
     """
-        Downloads a model from Weights & Biases and returns it.
+        Downloads a control model from Weights & Biases and returns it.
     """
     artifact = run.use_artifact(model_name, type="model")
     artifact_dir = artifact.download()
@@ -62,8 +66,8 @@ def download_control_model(model_name, run):
 
 def create_ensemble(model_names, config, run, model_name_prefix="", model_name_suffix=""):
     """
-        Creates an ensemble given names of the models.
-        The ensemble model is returned
+        Given models' names, it downloads them and creates an ensemble from them.
+        The ensemble model is subsequently returned
     """
 
     models = []
@@ -89,7 +93,7 @@ if __name__ == "__main__":
 
     run = wandb.init(project="reCNN_visual_prosthesis", entity="csng-cuni")
 
-    # You have to edit this by hand. Unfortunatelly, there is no other way around in wandb yet.
+    # You have to edit this by hand. Unfortunately, there is no other way around in Wandb yet.
     model_names = [
         "csng-cuni/reCNN_visual_prosthesis/model-uwl9k6yy:v0",
         "csng-cuni/reCNN_visual_prosthesis/model-cj0yrapk:v0",
