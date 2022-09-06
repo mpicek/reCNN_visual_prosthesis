@@ -1,6 +1,6 @@
 # Rotation-equivariant convolutional neural network for design of visual prosthetic stimulation protocol
 
-The code for Martin Picek's bachelor thesis supervised by Luca Baroni and Ján Antolík
+The code for Martin Picek's bachelor thesis supervised by Ján Antolík and Luca Baroni
 
 To clone the repository:
 ```bash
@@ -31,7 +31,11 @@ Then run `python train_on_lurz.py`, the network starts a training.
 
 ## Run the best models
 
-To run the best models and see the results, run `python results.py`.
+To run an evaluation on the best models and see the results, run `python present_best_models.py --dataset_type both`.
+
+## Run experiments and generate figures
+
+Run `python experiments/experiments.py` to obtain information from experiments as well as generated graphs in img/ directory.
 
 ## Creating and running a sweep
 
