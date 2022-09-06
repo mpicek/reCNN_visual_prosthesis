@@ -35,7 +35,7 @@ To run an evaluation on the best models and see the results, run `python present
 
 ## Run experiments and generate figures
 
-Run `python experiments/experiments.py` to obtain information from experiments as well as generated graphs in img/ directory.
+Run `python experiments/experiments.py` to obtain information from experiments as well as generated graphs in `img/` directory.
 
 ## Creating and running a sweep
 

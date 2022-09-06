@@ -6,7 +6,8 @@ The code in this repository is based on the following two fundamental libraries:
  - [neuralpredictors](https://github.com/sinzlab/neuralpredictors)
  - [predict_neural_responses](https://github.com/lucabaroni/predict_neural_responses)
 
-In this document, we describe how these libraries are incorporated in the code.
+In this document, we describe how these libraries are incorporated in the code
+along with a brief description of other folders and files in this repository.
 
 ### predict_neural_responses
 
@@ -40,16 +41,41 @@ for the purposes of our work.
 In all three files it is usually very clear what functions were added/edited/not changed.
 However, it is always possible to use `diff` with the original Neuralpredictors library..
 
-## metacentrum folder
+### Description of other folders
 
-This folder contains scripts for deployment of the models onto the MetaCentrum servers.
+## `metacentrum/`
 
-## Description of other files:
+This folder contains scripts and configs for deployment of the models onto the MetaCentrum servers.
+
+## `experiments/`
+
+In this folder, there are two files providing the experiments that were done
+with the trained networks. Moreover, it can generate multiple interesting
+figures that were subsequently used in the thesis. Just run `python experiments/experiments.py`.
+
+## `imgs/`
+
+Contains generated images. Most of them were used in the thesis.
+
+## `sandbox/`
+
+Consists of older experiments and tests that were believed to be important for archivation.
+Do not use this repository, it is just for the development. Nothing interesting here.
+
+## `sweep_configs/`
+
+A folder with multiple configuration files that were used for wandb sweeps.
+
+## Description of files in the root directory of this repository
+
+`Antolik_dataset.py` and `Lurz_dataset.py` contain classes for work with datasets.
+
+`core.py`, `readout.py` contain the developed core and readout.
 
 `model_trainer.py` is a file with a purpose of preparing the datasets and 
 setting up a training of a given model with a connection to Wandb.
 
-`models.py` contains developed models including the most important one: reCNN_bottleneck_CyclicGauss3d
+`models.py` contains developed models including the most important one: `reCNN_bottleneck_CyclicGauss3d`
 
 `present_best_models.py` is a file that is supposed to run an evaluation on the best
 models and print the obtained results.
@@ -65,3 +91,5 @@ of the control model on Lurz's and Antolik's dataset.
 `utils.py` provides utilities that can be used in the code.
 
 `graph_generator.py` is a script for generating figures for the thesis.
+
+`create_ensemble.py` is a file that aggregates multiple models and creates an ensemble.
