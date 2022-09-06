@@ -1,6 +1,5 @@
 from model_trainer import run_wandb_training
-from models import Lurz, PicekGauss, Picek, LurzRotEq, LurzGauss, RotEqBottleneckGauss3dCyclic
-from predict_neural_responses.models import CNN_SxF
+from models import reCNN_bottleneck_CyclicGauss3d
 from model_trainer import Lurz_dataset_preparation_function, Antolik_dataset_preparation_function_test
 
 
@@ -28,7 +27,7 @@ config = {
     "upsampling": 2,           
     "rot_eq_batch_norm": True, 
     "stack": -1 ,               
-    "depth_separable": True,   # default ... TODO
+    "depth_separable": True,
 
     # READOUT CONFIG
     "readout_bias": True,
@@ -73,7 +72,7 @@ config = {
 
 def main():
     
-    model = run_wandb_training(config, Antolik_dataset_preparation_function_test, ENTITY, PROJECT, model_class=RotEqBottleneckGauss3dCyclic)
+    model = run_wandb_training(config, Antolik_dataset_preparation_function_test, ENTITY, PROJECT, model_class=reCNN_bottleneck_CyclicGauss3d)
     return model
     
 

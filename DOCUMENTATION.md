@@ -44,7 +44,24 @@ However, it is always possible to use `diff` with the original Neuralpredictors 
 
 This folder contains scripts for deployment of the models onto the MetaCentrum servers.
 
-## experiments folder
+## Description of other files:
 
+`model_trainer.py` is a file with a purpose of preparing the datasets and 
+setting up a training of a given model with a connection to Wandb.
 
+`models.py` contains developed models including the most important one: reCNN_bottleneck_CyclicGauss3d
 
+`present_best_models.py` is a file that is supposed to run an evaluation on the best
+models and print the obtained results.
+
+Files `train_on_lurz.py`, `train_on_antolik.py` are files that are used to setup a training
+of our model on Lurz's or Antolik's data.
+
+Files `train_control_model_on_lurz_dataset.py`, `train_control_model_on_antolik_dataset.py` setup training
+of the control model on Lurz's and Antolik's dataset.
+
+`train_antolik_test.py` trains only on Antolik's test set.
+
+`utils.py` provides utilities that can be used in the code.
+
+`graph_generator.py` is a script for generating figures for the thesis.

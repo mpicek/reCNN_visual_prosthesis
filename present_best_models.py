@@ -9,7 +9,23 @@ from pytorch_lightning.loggers import WandbLogger
 import argparse
 
 from create_ensemble import download_model, create_ensemble, download_control_model
-from num_of_parameters import return_number_of_parameters
+
+
+def return_number_of_parameters(model, part_of_network="all"):
+    """
+        Given a Pytorch model, it returns its number of parameters.
+        The argument part_of_network decides whether it returns number of
+        all parameters ("all"), only core's parameters ("core") or only
+        readout's parameters ("readout")
+    """
+
+    if part_of_network == "all":
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    elif part_of_network == "core":
+        return sum(p.numel() for p in model.core.parameters() if p.requires_grad)
+    elif part_of_network == "readout":
+        return sum(p.numel() for p in model.readout.parameters() if p.requires_grad)
+
 
 def present_results(args, lists_of_model_names, control_model_name, data_module, trainer, run, model_name_prefix="csng-cuni/reCNN_visual_prosthesis/model-"):
     """
@@ -80,11 +96,11 @@ def present_lurz(args, trainer, run):
 
     list_of_model_names = [
         ["The best model with 8 rotations trained on dataset from Lurz et al.", "unpwsnba"],
-        ["Ensemble of 5 models with 8 rotations trained on dataset from Lurz et al.", "v9gfoto8", "q7zrzwfs", "uwl9k6yy", "goe2mitq", "unpwsnba"],
+        #["Ensemble of 5 models with 8 rotations trained on dataset from Lurz et al.", "v9gfoto8", "q7zrzwfs", "uwl9k6yy", "goe2mitq", "unpwsnba"],
         ["The best model with 16 rotations trained on dataset from Lurz et al.", "zipjy41m"],
-        ["Ensemble of 5 models with 16 rotations trained on dataset from Lurz et al.", "dp7c43r5", "wkw2tizy", "iq8yo22o", "wh88cya8", "zipjy41m"],
+        #["Ensemble of 5 models with 16 rotations trained on dataset from Lurz et al.", "dp7c43r5", "wkw2tizy", "iq8yo22o", "wh88cya8", "zipjy41m"],
         ["The best model with 24 rotations trained on dataset from Lurz et al.", "hl2gbqtm"],
-        ["Ensemble of 5 models (not necessarily with the same architecture) with 24 rotations trained on dataset from Lurz et al.", "erbca5lq", "fnxp9gzu", "sxdmolgo", "6859220j", "hl2gbqtm"],
+        #["Ensemble of 5 models (not necessarily with the same architecture) with 24 rotations trained on dataset from Lurz et al.", "erbca5lq", "fnxp9gzu", "sxdmolgo", "6859220j", "hl2gbqtm"],
     ]
     
     present_results(args, list_of_model_names, control_model_name, dm, trainer, run)
@@ -99,9 +115,9 @@ def present_antolik(args, trainer, run):
 
     list_of_model_names = [
         ["The best model with 8 rotations trained on dataset from Lurz et al.", "abwwf3vs"],
-        ["Ensemble of 5 models with 8 rotations trained on dataset from Lurz et al.", "ir6d5s39", "hlfxqbpz", "bzt64a1d", "uw8rl69f", "abwwf3vs"],
+        #["Ensemble of 5 models with 8 rotations trained on dataset from Lurz et al.", "ir6d5s39", "hlfxqbpz", "bzt64a1d", "uw8rl69f", "abwwf3vs"],
         ["The best model with 16 rotations trained on dataset from Lurz et al.", "1f5x6dz0"],
-        ["Ensemble of 5 models with 16 rotations trained on dataset from Lurz et al.", "h4etwje7", "pvm7l1fg", "cahvhpyr", "kmhokhhq", "1f5x6dz0"],
+        #["Ensemble of 5 models with 16 rotations trained on dataset from Lurz et al.", "h4etwje7", "pvm7l1fg", "cahvhpyr", "kmhokhhq", "1f5x6dz0"],
     ]
     
     present_results(args, list_of_model_names, control_model_name, dm, trainer, run)
@@ -127,7 +143,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--dataset_type",
-        default="Lurz",
+        default="Antolik",
         type=str,
         help="The presented dataset. Possible options are: Lurz, Antolik, both",
     )
