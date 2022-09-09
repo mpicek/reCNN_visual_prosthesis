@@ -1,0 +1,2190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>Lurz_dataset API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>Lurz_dataset</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import pytorch_lightning as pl
+from torch.utils.data import DataLoader
+import numpy as np
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
+import torch
+
+from neuralpredictors.data.datasets.statics.filetree import FileTreeDataset
+from neuralpredictors.data.transforms import (
+    Subsample,
+    ToTensor,
+    NeuroNormalizer,
+    AddBehaviorAsChannels,
+    SelectInputChannel,
+)
+from neuralpredictors.data.samplers import SubsetSequentialSampler
+
+from neuralpredictors.measures.np_functions import (
+    oracle_corr_jackknife,
+    oracle_corr_conservative,
+    fev,
+)
+
+from tqdm import tqdm
+
+from typing import Optional
+
+import sys
+import zipfile
+import pathlib
+from distutils.dir_util import copy_tree
+import shutil
+import wget
+import os
+
+# from neuralpredictors.data.samplers import RepeatsBatchSampler
+from neuralpredictors.measures.np_functions import corr
+
+
+from collections import Counter
+import numpy as np
+from torch.utils.data import Sampler
+import torch
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class RepeatsBatchSampler(Sampler):
+    def __init__(self, keys, subset_index=None, **kwargs):
+        &#34;&#34;&#34;A batch sampler where each batch consists of all samples with identical keys value.
+
+        Args:
+            keys (Any): list of keys used to group indicies.
+            subset_index (list of indices, optional): List of indices to subselect entries from keys.
+                            Defaults to None, where all indices from keys are used.
+        &#34;&#34;&#34;
+        if subset_index is None:
+            subset_index = np.arange(len(keys))
+        _, inv = np.unique(
+            keys[subset_index], return_inverse=True
+        )  # assigns a batch to each trial
+        self.repeat_index = np.unique(inv)  # on which index we are at
+        self.repeat_sets = inv
+        self.subset_index = subset_index
+        self.batch_size = 10
+        # self.batch_size = self.repeat_sets
+
+    def __iter__(self):
+        for u in self.repeat_index:
+            self.batch_size = len(list(self.subset_index[self.repeat_sets == u]))
+            yield list(self.subset_index[self.repeat_sets == u])
+
+    def __len__(self):
+        return len(self.repeat_index)
+
+
+class LurzDataModule(pl.LightningDataModule):
+    &#34;&#34;&#34;Based on Lurz 2020 code - mouse_loaders.py.
+    We work with just one dataset (not multiple), therefore static_loaders were
+    ignored, we worked only with ONE static_loader.
+    Furthermore, static_shared_loaders were also ignored.
+
+    In this code, there are comments that explain, what exactly was changed.
+    The code was updated to work with neuralpredictors version 0.2.0, Lurz&#39;s code
+    did not work with this version (it worked with 0.0.3 version which is too low)
+
+    This class is an implementation of PyTorch Lightning LightningDataModule,
+    so that we can use PyTorch Lightning.
+    &#34;&#34;&#34;
+
+    _URL = &#34;https://gin.g-node.org/cajal/Lurz2020/archive/master.zip&#34;
+
+    def __init__(
+        self,
+        data_dir,
+        batch_size,
+        # seed=None,
+        areas=None,
+        layers=None,
+        tier=None,
+        neuron_ids=None,
+        neuron_n=None,
+        exclude_neuron_n=0,
+        neuron_base_seed=None,
+        image_ids=None,
+        image_n=None,
+        image_base_seed=None,
+        normalize=True,
+        include_behavior=False,
+        exclude=None,
+        select_input_channel=None,
+        file_tree=True,
+        return_test_sampler=False,
+        oracle_condition=None,
+        num_workers=0,
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        # seed=None,
+        self.areas = areas
+        self.layers = layers
+        self.tier = tier
+        self.neuron_ids = neuron_ids
+        self.neuron_n = neuron_n
+        self.exclude_neuron_n = exclude_neuron_n
+        self.neuron_base_seed = neuron_base_seed
+        self.image_ids = image_ids
+        self.image_n = image_n
+        self.image_base_seed = image_base_seed
+        self.normalize = normalize
+        self.include_behavior = include_behavior
+        self.exclude = exclude
+        self.select_input_channel = select_input_channel
+        self.file_tree = file_tree
+        self.return_test_sampler = return_test_sampler
+        self.oracle_condition = oracle_condition
+        self.num_workers = num_workers
+
+        # following lines all copied ... just some checks
+        assert any(
+            [image_ids is None, all([image_n is None, image_base_seed is None])]
+        ), &#34;image_ids can not be set at the same time with anhy other image selection criteria&#34;
+        assert any(
+            [
+                self.neuron_ids is None,
+                all(
+                    [
+                        neuron_n is None,
+                        neuron_base_seed is None,
+                        areas is None,
+                        layers is None,
+                        exclude_neuron_n == 0,
+                    ]
+                ),
+            ]
+        ), &#34;neuron_ids can not be set at the same time with any other neuron selection criteria&#34;
+        assert any(
+            [exclude_neuron_n == 0, neuron_base_seed is not None]
+        ), &#34;neuron_base_seed must be set when exclude_neuron_n is not 0&#34;
+        self.data_key = (
+            data_dir.split(&#34;static&#34;)[-1]
+            .split(&#34;.&#34;)[0]
+            .replace(&#34;preproc&#34;, &#34;&#34;)
+            .replace(&#34;_nobehavior&#34;, &#34;&#34;)
+        )
+
+        assert (
+            include_behavior and select_input_channel
+        ) is False, (
+            &#34;Selecting an Input Channel and Adding Behavior can not both be true&#34;
+        )
+
+    def prepare_data(self):
+        &#34;&#34;&#34;Downloads the data (if not downloaded yet) and unzips them (if not unzipped yet).
+
+        In this method, as the documentation of Pytorch Lightning states,
+        we should not do anything like self.x = y # = assign state
+        &#34;&#34;&#34;
+        path = pathlib.Path(self.data_dir)
+
+        if not path.exists():
+            print(&#34;We have to download and prepare the data.&#34;)
+            print(&#34;This might take a long time (~1 hour).&#34;)
+            print(
+                f&#34;Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.&#34;,
+                file=sys.stderr,
+            )
+            wget.download(self._URL)
+
+            print(
+                f&#34;\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.&#34;,
+                file=sys.stderr,
+            )
+            with zipfile.ZipFile(&#34;Lurz2020-master.zip&#34;, &#34;r&#34;) as zip_ref:
+                zip_ref.extractall(&#34;tmp_lurz_extracted&#34;)
+
+            pathlib.Path(self.data_dir).mkdir(parents=True)
+
+            print(
+                f&#34;Copying the temporarily unzipped folder to the specified path&#34;,
+                file=sys.stderr,
+            )
+            copy_tree(
+                &#34;./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0&#34;, str(path)
+            )
+            print(
+                f&#34;Removing the temporary folder and the downloaded .zip file.&#34;,
+                file=sys.stderr,
+            )
+            shutil.rmtree(&#34;tmp_lurz_extracted&#34;)
+            os.remove(&#34;Lurz2020-master.zip&#34;)
+
+    def setup(self, stage: Optional[str] = None):
+        &#34;&#34;&#34;Sets up the dataset, loads it, shuffles it and sets up the sampler.
+
+        Args:
+            stage (Optional[str], optional): Possible values are &#39;fit, &#39;test&#39;,
+            &#39;predict&#39; or None. None means both &#39;fit&#39; and &#39;test&#39;. If &#39;fit&#39;, the
+            method sets up only the train dataset. If &#39;test&#39;, it sets up only
+            the train dataset. If &#39;predict&#39;, it sets up the train dataset.
+            Defaults to None.
+        &#34;&#34;&#34;
+
+        # we use only FileTreeDataset (no StaticImageSet) as it was turn on by default
+        self.dat = (
+            FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;, &#34;behavior&#34;)
+            if self.include_behavior
+            else FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;)
+        )
+
+        # following lines all copied
+        # original comment:
+        # The permutation MUST be added first and the conditions below MUST NOT be based on the original order
+        # specify condition(s) for sampling neurons. If you want to sample specific neurons define conditions that would effect idx
+        conds = np.ones(len(self.dat.neurons.area), dtype=bool)
+        if self.areas is not None:
+            conds &amp;= np.isin(self.dat.neurons.area, self.areas)
+        if self.layers is not None:
+            conds &amp;= np.isin(self.dat.neurons.layer, self.layers)
+        idx = np.where(conds)[0]
+        if self.neuron_n is not None:
+            random_state = np.random.get_state()
+            if self.neuron_base_seed is not None:
+                np.random.seed(
+                    self.neuron_base_seed * self.neuron_n
+                )  # avoid nesting by making seed dependent on number of neurons
+            assert (
+                len(self.dat.neurons.unit_ids) &gt;= self.exclude_neuron_n + self.neuron_n
+            ), &#34;After excluding {} neurons, there are not {} neurons left&#34;.format(
+                self.exclude_neuron_n, self.neuron_n
+            )
+            self.neuron_ids = np.random.choice(
+                self.dat.neurons.unit_ids,
+                size=self.exclude_neuron_n + self.neuron_n,
+                replace=False,
+            )[self.exclude_neuron_n :]
+            np.random.set_state(random_state)
+        if self.neuron_ids is not None:
+            idx = [
+                np.where(self.dat.neurons.unit_ids == unit_id)[0][0]
+                for unit_id in self.neuron_ids
+            ]
+
+        # following lines all copied (but tensors don&#39;t go to cuda)
+        # transforms .. ToTensor -&gt; no Cuda as it handles the Trainer from Pytorch Lightning
+        self.more_transforms = [Subsample(idx), ToTensor(cuda=False)]
+        if self.normalize:
+            self.more_transforms.insert(
+                0, NeuroNormalizer(self.dat, exclude=self.exclude)
+            )
+
+        if self.include_behavior:
+            self.more_transforms.insert(0, AddBehaviorAsChannels())
+
+        if self.select_input_channel is not None:
+            self.more_transforms.insert(
+                0, SelectInputChannel(self.select_input_channel)
+            )
+
+        # add transforms to the dataset
+        self.dat.transforms.extend(self.more_transforms)
+
+        # These two lines changed
+        # tier_array = dat.trial_info.tiers if file_tree else dat.tiers
+        # image_id_array = dat.trial_info.frame_image_id if file_tree else dat.info.frame_image_id
+        # to these lines:
+        tier_array = self.dat.trial_info.tiers
+        image_id_array = self.dat.trial_info.frame_image_id
+
+        # no return of test_sampler (deleted)
+
+        # the rest of this method was altered a little bit just because of the
+        # previous decisions - there are no &#34;tiers&#34;, we create train, val test
+        # based on stage variable. So only the &#34;decision logic&#34; is a little different
+        # (if conditions), but the functionality is basicly the same
+
+        # for creating the separate datasets, we choose ids and create a SubsetSampler
+        # that samples the correct images
+
+        # train, test and val datasets are later created based on
+
+        # Assign train/val datasets for use in dataloaders
+        if stage == &#34;fit&#34; or stage == &#34;predict&#34; or stage is None:
+            subset_idx_train = None
+            subset_idx_val = np.where(tier_array == &#34;validation&#34;)[0]
+
+            if self.image_ids is not None:
+                subset_idx_train = [
+                    np.where(image_id_array == image_id)[0][0]
+                    for image_id in self.image_ids
+                ]
+                assert (
+                    sum(tier_array[subset_idx_train] != &#34;train&#34;) == 0
+                ), &#34;image_ids contain validation or test images&#34;
+            elif self.image_n is not None:
+                random_state = np.random.get_state()
+                if self.image_base_seed is not None:
+                    np.random.seed(
+                        self.image_base_seed * self.image_n
+                    )  # avoid nesting by making seed dependent on number of images
+                subset_idx_train = np.random.choice(
+                    np.where(tier_array == &#34;train&#34;)[0], size=self.image_n, replace=False
+                )
+                np.random.set_state(random_state)
+            else:
+                subset_idx_train = np.where(tier_array == &#34;train&#34;)[0]
+
+            self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
+            self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
+
+            self.val_sampler = SubsetSequentialSampler(subset_idx_val)
+
+        if stage == &#34;test&#34; or stage is None:
+            subset_idx_test = np.where(tier_array == &#34;test&#34;)[0]
+            self.test_sampler = SubsetSequentialSampler(subset_idx_test)
+
+    def get_input_shape(self):
+        return self.dat[0].images.shape
+
+    def get_output_shape(self):
+        return self.dat[0].responses.shape
+
+    def get_mean_fast(self):
+        &#34;&#34;&#34;Computes the mean response of the validation dataset (much smaller than the train dataset and thus much quicker). If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        &#34;&#34;&#34;   
+        dataloader = DataLoader(
+            self.dat, sampler=self.val_sampler, batch_size=self.batch_size
+        )
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+        return mean
+
+    def get_mean(self):
+        &#34;&#34;&#34;Computes the mean response of the train dataset. If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        &#34;&#34;&#34;
+
+        mean_path = pathlib.Path(self.data_dir + &#34;/mean.npy&#34;)
+
+        if mean_path.exists():
+            mean = np.load(mean_path)
+            print(&#34;Loaded precomputed mean from &#34; + str(mean_path))
+            return torch.from_numpy(mean)
+
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size
+        )
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+
+        np.save(mean_path, mean)
+        print(&#34;Created mean array to &#34; + str(mean_path))
+        return mean
+
+    def train_len(self):
+        return len(self.train_random_sampler)
+
+    def val_len(self):
+        return len(self.val_sampler)
+
+    def test_len(self):
+        return len(self.test_sampler)
+
+    def __len__(self):
+        &#34;&#34;&#34;The length of ALL the data we have (train + val + test)
+
+        Returns:
+            int: The length of ALL the data we have (train + val + test)
+        &#34;&#34;&#34;      
+        return len(self.dat)
+
+    def print_dataset_info(self):
+        &#34;&#34;&#34;Creates a train dataloader, gets first piece of data and prints its shape
+        &#34;&#34;&#34;
+        print(&#34; ------------ DATASET INFO ------------ &#34;)
+        print(&#34; SHAPES:&#34;)
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size
+        )
+        print(f&#34;    Input shape (images): {self.get_input_shape()}&#34;)
+        print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+        print(next(iter(dataloader)).images.shape)
+
+        print(f&#34;    Output shape (responses): {self.get_output_shape()}&#34;)
+        print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+        print(next(iter(dataloader)).responses.shape)
+
+        print(&#34; LENGTH:&#34;)
+        print(f&#34;    Length of the dataset is {len(self)}&#34;)
+        print(f&#34;    Length of the train set is {self.train_len()}&#34;)
+        print(f&#34;    Length of the val set is {self.val_len()}&#34;)
+        print(f&#34;    Length of the test set is {self.test_len()}&#34;)
+
+        print(&#34; -------------------------------------- &#34;)
+
+    def train_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The train DataLoader
+        &#34;&#34;&#34;       
+        return DataLoader(
+            self.dat,
+            sampler=self.train_random_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def val_dataloader(self):
+        &#34;&#34;&#34;
+        Validation data are in the variable train_data 
+        (but the indices are splitted to self.val_sampler)
+
+        Returns:
+            DataLoader: The validation DataLoader
+        &#34;&#34;&#34;   
+        return DataLoader(
+            self.dat,
+            sampler=self.val_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def test_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The test DataLoader
+        &#34;&#34;&#34;  
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def get_oracle_dataloader(
+        self, toy_data=False, oracle_condition=None, verbose=False
+        ):
+        &#34;&#34;&#34;Returns the dataset for oracle computations and averaged trials evaluation.
+
+        Args:
+            toy_data (bool, optional): Whether to use a small subset of data. Defaults to False.
+            oracle_condition (_type_, optional): Conditions to limit the oracle. Defaults to None.
+            verbose (bool, optional): Whether to be verbose or not. Defaults to False.
+
+        Raises:
+            ValueError: Problems with loading the oracle dataset.
+
+        Returns:
+            DataLoader: The test DataLoader with batch_size=10
+        &#34;&#34;&#34;
+
+        if toy_data:
+            condition_hashes = self.dat.info.condition_hash
+        else:
+            dat_info = self.dat.trial_info
+            if &#34;image_id&#34; in dir(dat_info):
+                condition_hashes = dat_info.image_id
+                image_class = dat_info.image_class
+            elif &#34;colorframeprojector_image_id&#34; in dir(dat_info):
+                condition_hashes = dat_info.colorframeprojector_image_id
+                image_class = dat_info.colorframeprojector_image_class
+            elif &#34;frame_image_id&#34; in dir(dat_info):
+                # gets here in this if else tree
+                condition_hashes = dat_info.frame_image_id
+                image_class = dat_info.frame_image_class
+            else:
+                raise ValueError(
+                    &#34;&#39;image_id&#39; &#39;colorframeprojector_image_id&#39;, or &#39;frame_image_id&#39; have to present in the dataset under dat.info &#34;
+                    &#34;in order to load get the oracle repeats.&#34;
+                )
+
+        max_idx = condition_hashes.max() + 1
+        classes, class_idx = np.unique(image_class, return_inverse=True)
+        identifiers = condition_hashes + class_idx * max_idx
+
+        dat_tiers = self.dat.trial_info.tiers
+        sampling_condition = (
+            np.where(dat_tiers == &#34;test&#34;)[0]
+            if oracle_condition is None
+            else np.where((dat_tiers == &#34;test&#34;) &amp; (class_idx == oracle_condition))[0]
+        )
+        if (oracle_condition is not None) and verbose:
+            print(
+                &#34;Created Testloader for image class {}&#34;.format(
+                    classes[oracle_condition]
+                )
+            )
+
+        # IDENTIFIERS ARE WHERE THINGS ARE NOT UNIQUE
+
+        sampler = RepeatsBatchSampler(identifiers, sampling_condition)
+        return DataLoader(self.dat, batch_sampler=sampler)
+
+    def get_correlations(
+        self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs
+    ):
+        &#34;&#34;&#34;Computes the correlations. Do not use this method, deprecated.
+        &#34;&#34;&#34;    
+        correlations = {}
+        for k, v in dataloaders.items():
+            target, output = self.model_predictions(
+                dataloader=v, model=model, data_key=k
+            )
+            correlations[k] = corr(target, output, axis=0, eps=1e-12)
+
+            if np.any(np.isnan(correlations[k])):
+                print(
+                    &#34;{}% NaNs , NaNs will be set to Zero.&#34;.format(
+                        np.isnan(correlations[k]).mean() * 100
+                    )
+                )
+            correlations[k][np.isnan(correlations[k])] = 0
+
+        if not as_dict:
+            correlations = (
+                np.hstack([v for v in correlations.values()])
+                if per_neuron
+                else np.mean(np.hstack([v for v in correlations.values()]))
+            )
+        return correlations
+
+    def model_predictions(self, model, dataloader, data_key):   
+        &#34;&#34;&#34;
+        Computes model predictions for a given dataloader and a model.
+        Do not use this method, deprecated.
+        Returns:
+            tuple: (target, output)
+                - target: ground truth, i.e. neuronal firing rates of the neurons
+                - output: responses as predicted by the network
+        &#34;&#34;&#34;
+
+        target, output = torch.empty(0), torch.empty(0)
+        for images, responses in dataloader:
+            # returns in batches.. for example images.shape = [10, 1, 36, 64]
+            if len(images.shape) == 5:
+                images = images.squeeze(dim=0)
+                responses = responses.squeeze(dim=0)
+            with torch.no_grad():
+                # the outputs and targets get concatenated into a veeeery long tensor
+                output = torch.cat((output, (model(images).detach().cpu())), dim=0)
+                target = torch.cat((target, responses.detach().cpu()), dim=0)
+
+        # on oracle dataloader returns both of shape (999, 5335), because 999 is test_len and 5335 is number_of_neurons
+        # or for dm.val_dataloader() returns (522, 5335), where 522 is dm.val_len()
+        return target.numpy(), output.numpy()
+
+    def return_test_sampler(self, oracle_condition=None, get_key=False):
+        &#34;&#34;&#34;
+
+        Args:
+            oracle_condition (_type_, optional): To limit the oracle. Defaults to None.
+            get_key (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            tuple or dict: The test sampler
+        &#34;&#34;&#34;        
+        print(&#34;Returning only test sampler with repeats...&#34;)
+        dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
+        return (
+            (self.data_key, {&#34;test&#34;: dataloader}) if get_key else {&#34;test&#34;: dataloader}
+        )
+
+    def predict_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The test DataLoader
+        &#34;&#34;&#34;   
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def model_performances(self, model=None, trainer=None, control_measures=None):
+        &#34;&#34;&#34;Evaluates the model and prints the results
+
+        Args:
+            model (pl.model, optional): Model to be evaluated. Defaults to None.
+            trainer (pl.trainer, optional): The trainer that performs the evaluation. Defaults to None.
+            control_measures (dict, optional): The control model&#39;s measures to be compared with our evaluated model. Defaults to None.
+
+        Returns:
+            dict: Dictionary of the resulting measures.
+        &#34;&#34;&#34;
+        model.test_average_batch = False
+        model.compute_oracle_fraction = False
+        val_score = trainer.test(model, self.val_dataloader(), verbose=False)
+        test_score = trainer.test(model, self.test_dataloader(), verbose=False)
+
+        model.test_average_batch = True
+        model.compute_oracle_fraction = True
+        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
+
+        val_score = val_score[0]
+        test_score = test_score[0]
+        test_repeats_averaged_score = test_repeats_averaged_score[0]
+
+        print(&#34;Validation dataset:&#34;)
+        print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(val_score[&#39;test/corr&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (val_score[&#39;test/corr&#39;] / control_measures[&#39;val/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+
+        # print(&#34;Test dataset:&#34;)
+        # print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_score[&#39;test/corr&#39;]) }&#34;)
+
+        print(&#34;Test dataset with averaged responses of repeated trials:&#34;)
+        print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;]) } {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;] / control_measures[&#39;test/repeated_trials/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+        print(f&#34;    Fraction oracle conservative: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;] / control_measures[&#39;test/fraction_oracle_conservative&#39;])) if control_measures else &#39;&#39;}&#34;)
+        print(f&#34;    Fraction oracle jackknife: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;] / control_measures[&#39;test/fraction_oracle_jackknife&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+        returned_measures = {
+            &#34;val/corr&#34;: val_score[&#39;test/corr&#39;],
+            &#34;test/repeated_trials/corr&#34;: test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;],
+            &#34;test/fraction_oracle_conservative&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;],
+            &#34;test/fraction_oracle_jackknife&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;]
+        }
+
+        return returned_measures
+        
+
+if __name__ == &#34;__main__&#34;:
+
+    data_dir = &#34;data/lurz2020/static20457-5-9-preproc0&#34;
+    dataset_config = {&#34;data_dir&#34;: data_dir, &#34;batch_size&#34;: 10, &#34;normalize&#34;: True}
+    #   &#34;exclude&#34;: None}
+
+    dm = LurzDataModule(**dataset_config)
+    dm.prepare_data()
+    dm.setup()
+    dm.print_dataset_info()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="Lurz_dataset.LurzDataModule"><code class="flex name class">
+<span>class <span class="ident">LurzDataModule</span></span>
+<span>(</span><span>data_dir, batch_size, areas=None, layers=None, tier=None, neuron_ids=None, neuron_n=None, exclude_neuron_n=0, neuron_base_seed=None, image_ids=None, image_n=None, image_base_seed=None, normalize=True, include_behavior=False, exclude=None, select_input_channel=None, file_tree=True, return_test_sampler=False, oracle_condition=None, num_workers=0)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Based on Lurz 2020 code - mouse_loaders.py.
+We work with just one dataset (not multiple), therefore static_loaders were
+ignored, we worked only with ONE static_loader.
+Furthermore, static_shared_loaders were also ignored.</p>
+<p>In this code, there are comments that explain, what exactly was changed.
+The code was updated to work with neuralpredictors version 0.2.0, Lurz's code
+did not work with this version (it worked with 0.0.3 version which is too low)</p>
+<p>This class is an implementation of PyTorch Lightning LightningDataModule,
+so that we can use PyTorch Lightning.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class LurzDataModule(pl.LightningDataModule):
+    &#34;&#34;&#34;Based on Lurz 2020 code - mouse_loaders.py.
+    We work with just one dataset (not multiple), therefore static_loaders were
+    ignored, we worked only with ONE static_loader.
+    Furthermore, static_shared_loaders were also ignored.
+
+    In this code, there are comments that explain, what exactly was changed.
+    The code was updated to work with neuralpredictors version 0.2.0, Lurz&#39;s code
+    did not work with this version (it worked with 0.0.3 version which is too low)
+
+    This class is an implementation of PyTorch Lightning LightningDataModule,
+    so that we can use PyTorch Lightning.
+    &#34;&#34;&#34;
+
+    _URL = &#34;https://gin.g-node.org/cajal/Lurz2020/archive/master.zip&#34;
+
+    def __init__(
+        self,
+        data_dir,
+        batch_size,
+        # seed=None,
+        areas=None,
+        layers=None,
+        tier=None,
+        neuron_ids=None,
+        neuron_n=None,
+        exclude_neuron_n=0,
+        neuron_base_seed=None,
+        image_ids=None,
+        image_n=None,
+        image_base_seed=None,
+        normalize=True,
+        include_behavior=False,
+        exclude=None,
+        select_input_channel=None,
+        file_tree=True,
+        return_test_sampler=False,
+        oracle_condition=None,
+        num_workers=0,
+    ):
+        super().__init__()
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        # seed=None,
+        self.areas = areas
+        self.layers = layers
+        self.tier = tier
+        self.neuron_ids = neuron_ids
+        self.neuron_n = neuron_n
+        self.exclude_neuron_n = exclude_neuron_n
+        self.neuron_base_seed = neuron_base_seed
+        self.image_ids = image_ids
+        self.image_n = image_n
+        self.image_base_seed = image_base_seed
+        self.normalize = normalize
+        self.include_behavior = include_behavior
+        self.exclude = exclude
+        self.select_input_channel = select_input_channel
+        self.file_tree = file_tree
+        self.return_test_sampler = return_test_sampler
+        self.oracle_condition = oracle_condition
+        self.num_workers = num_workers
+
+        # following lines all copied ... just some checks
+        assert any(
+            [image_ids is None, all([image_n is None, image_base_seed is None])]
+        ), &#34;image_ids can not be set at the same time with anhy other image selection criteria&#34;
+        assert any(
+            [
+                self.neuron_ids is None,
+                all(
+                    [
+                        neuron_n is None,
+                        neuron_base_seed is None,
+                        areas is None,
+                        layers is None,
+                        exclude_neuron_n == 0,
+                    ]
+                ),
+            ]
+        ), &#34;neuron_ids can not be set at the same time with any other neuron selection criteria&#34;
+        assert any(
+            [exclude_neuron_n == 0, neuron_base_seed is not None]
+        ), &#34;neuron_base_seed must be set when exclude_neuron_n is not 0&#34;
+        self.data_key = (
+            data_dir.split(&#34;static&#34;)[-1]
+            .split(&#34;.&#34;)[0]
+            .replace(&#34;preproc&#34;, &#34;&#34;)
+            .replace(&#34;_nobehavior&#34;, &#34;&#34;)
+        )
+
+        assert (
+            include_behavior and select_input_channel
+        ) is False, (
+            &#34;Selecting an Input Channel and Adding Behavior can not both be true&#34;
+        )
+
+    def prepare_data(self):
+        &#34;&#34;&#34;Downloads the data (if not downloaded yet) and unzips them (if not unzipped yet).
+
+        In this method, as the documentation of Pytorch Lightning states,
+        we should not do anything like self.x = y # = assign state
+        &#34;&#34;&#34;
+        path = pathlib.Path(self.data_dir)
+
+        if not path.exists():
+            print(&#34;We have to download and prepare the data.&#34;)
+            print(&#34;This might take a long time (~1 hour).&#34;)
+            print(
+                f&#34;Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.&#34;,
+                file=sys.stderr,
+            )
+            wget.download(self._URL)
+
+            print(
+                f&#34;\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.&#34;,
+                file=sys.stderr,
+            )
+            with zipfile.ZipFile(&#34;Lurz2020-master.zip&#34;, &#34;r&#34;) as zip_ref:
+                zip_ref.extractall(&#34;tmp_lurz_extracted&#34;)
+
+            pathlib.Path(self.data_dir).mkdir(parents=True)
+
+            print(
+                f&#34;Copying the temporarily unzipped folder to the specified path&#34;,
+                file=sys.stderr,
+            )
+            copy_tree(
+                &#34;./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0&#34;, str(path)
+            )
+            print(
+                f&#34;Removing the temporary folder and the downloaded .zip file.&#34;,
+                file=sys.stderr,
+            )
+            shutil.rmtree(&#34;tmp_lurz_extracted&#34;)
+            os.remove(&#34;Lurz2020-master.zip&#34;)
+
+    def setup(self, stage: Optional[str] = None):
+        &#34;&#34;&#34;Sets up the dataset, loads it, shuffles it and sets up the sampler.
+
+        Args:
+            stage (Optional[str], optional): Possible values are &#39;fit, &#39;test&#39;,
+            &#39;predict&#39; or None. None means both &#39;fit&#39; and &#39;test&#39;. If &#39;fit&#39;, the
+            method sets up only the train dataset. If &#39;test&#39;, it sets up only
+            the train dataset. If &#39;predict&#39;, it sets up the train dataset.
+            Defaults to None.
+        &#34;&#34;&#34;
+
+        # we use only FileTreeDataset (no StaticImageSet) as it was turn on by default
+        self.dat = (
+            FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;, &#34;behavior&#34;)
+            if self.include_behavior
+            else FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;)
+        )
+
+        # following lines all copied
+        # original comment:
+        # The permutation MUST be added first and the conditions below MUST NOT be based on the original order
+        # specify condition(s) for sampling neurons. If you want to sample specific neurons define conditions that would effect idx
+        conds = np.ones(len(self.dat.neurons.area), dtype=bool)
+        if self.areas is not None:
+            conds &amp;= np.isin(self.dat.neurons.area, self.areas)
+        if self.layers is not None:
+            conds &amp;= np.isin(self.dat.neurons.layer, self.layers)
+        idx = np.where(conds)[0]
+        if self.neuron_n is not None:
+            random_state = np.random.get_state()
+            if self.neuron_base_seed is not None:
+                np.random.seed(
+                    self.neuron_base_seed * self.neuron_n
+                )  # avoid nesting by making seed dependent on number of neurons
+            assert (
+                len(self.dat.neurons.unit_ids) &gt;= self.exclude_neuron_n + self.neuron_n
+            ), &#34;After excluding {} neurons, there are not {} neurons left&#34;.format(
+                self.exclude_neuron_n, self.neuron_n
+            )
+            self.neuron_ids = np.random.choice(
+                self.dat.neurons.unit_ids,
+                size=self.exclude_neuron_n + self.neuron_n,
+                replace=False,
+            )[self.exclude_neuron_n :]
+            np.random.set_state(random_state)
+        if self.neuron_ids is not None:
+            idx = [
+                np.where(self.dat.neurons.unit_ids == unit_id)[0][0]
+                for unit_id in self.neuron_ids
+            ]
+
+        # following lines all copied (but tensors don&#39;t go to cuda)
+        # transforms .. ToTensor -&gt; no Cuda as it handles the Trainer from Pytorch Lightning
+        self.more_transforms = [Subsample(idx), ToTensor(cuda=False)]
+        if self.normalize:
+            self.more_transforms.insert(
+                0, NeuroNormalizer(self.dat, exclude=self.exclude)
+            )
+
+        if self.include_behavior:
+            self.more_transforms.insert(0, AddBehaviorAsChannels())
+
+        if self.select_input_channel is not None:
+            self.more_transforms.insert(
+                0, SelectInputChannel(self.select_input_channel)
+            )
+
+        # add transforms to the dataset
+        self.dat.transforms.extend(self.more_transforms)
+
+        # These two lines changed
+        # tier_array = dat.trial_info.tiers if file_tree else dat.tiers
+        # image_id_array = dat.trial_info.frame_image_id if file_tree else dat.info.frame_image_id
+        # to these lines:
+        tier_array = self.dat.trial_info.tiers
+        image_id_array = self.dat.trial_info.frame_image_id
+
+        # no return of test_sampler (deleted)
+
+        # the rest of this method was altered a little bit just because of the
+        # previous decisions - there are no &#34;tiers&#34;, we create train, val test
+        # based on stage variable. So only the &#34;decision logic&#34; is a little different
+        # (if conditions), but the functionality is basicly the same
+
+        # for creating the separate datasets, we choose ids and create a SubsetSampler
+        # that samples the correct images
+
+        # train, test and val datasets are later created based on
+
+        # Assign train/val datasets for use in dataloaders
+        if stage == &#34;fit&#34; or stage == &#34;predict&#34; or stage is None:
+            subset_idx_train = None
+            subset_idx_val = np.where(tier_array == &#34;validation&#34;)[0]
+
+            if self.image_ids is not None:
+                subset_idx_train = [
+                    np.where(image_id_array == image_id)[0][0]
+                    for image_id in self.image_ids
+                ]
+                assert (
+                    sum(tier_array[subset_idx_train] != &#34;train&#34;) == 0
+                ), &#34;image_ids contain validation or test images&#34;
+            elif self.image_n is not None:
+                random_state = np.random.get_state()
+                if self.image_base_seed is not None:
+                    np.random.seed(
+                        self.image_base_seed * self.image_n
+                    )  # avoid nesting by making seed dependent on number of images
+                subset_idx_train = np.random.choice(
+                    np.where(tier_array == &#34;train&#34;)[0], size=self.image_n, replace=False
+                )
+                np.random.set_state(random_state)
+            else:
+                subset_idx_train = np.where(tier_array == &#34;train&#34;)[0]
+
+            self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
+            self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
+
+            self.val_sampler = SubsetSequentialSampler(subset_idx_val)
+
+        if stage == &#34;test&#34; or stage is None:
+            subset_idx_test = np.where(tier_array == &#34;test&#34;)[0]
+            self.test_sampler = SubsetSequentialSampler(subset_idx_test)
+
+    def get_input_shape(self):
+        return self.dat[0].images.shape
+
+    def get_output_shape(self):
+        return self.dat[0].responses.shape
+
+    def get_mean_fast(self):
+        &#34;&#34;&#34;Computes the mean response of the validation dataset (much smaller than the train dataset and thus much quicker). If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        &#34;&#34;&#34;   
+        dataloader = DataLoader(
+            self.dat, sampler=self.val_sampler, batch_size=self.batch_size
+        )
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+        return mean
+
+    def get_mean(self):
+        &#34;&#34;&#34;Computes the mean response of the train dataset. If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        &#34;&#34;&#34;
+
+        mean_path = pathlib.Path(self.data_dir + &#34;/mean.npy&#34;)
+
+        if mean_path.exists():
+            mean = np.load(mean_path)
+            print(&#34;Loaded precomputed mean from &#34; + str(mean_path))
+            return torch.from_numpy(mean)
+
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size
+        )
+        summed = torch.zeros(self.get_output_shape())
+        for d in dataloader:
+            summed += torch.sum(d.responses, 0)
+
+        mean = summed / self.train_len()
+
+        np.save(mean_path, mean)
+        print(&#34;Created mean array to &#34; + str(mean_path))
+        return mean
+
+    def train_len(self):
+        return len(self.train_random_sampler)
+
+    def val_len(self):
+        return len(self.val_sampler)
+
+    def test_len(self):
+        return len(self.test_sampler)
+
+    def __len__(self):
+        &#34;&#34;&#34;The length of ALL the data we have (train + val + test)
+
+        Returns:
+            int: The length of ALL the data we have (train + val + test)
+        &#34;&#34;&#34;      
+        return len(self.dat)
+
+    def print_dataset_info(self):
+        &#34;&#34;&#34;Creates a train dataloader, gets first piece of data and prints its shape
+        &#34;&#34;&#34;
+        print(&#34; ------------ DATASET INFO ------------ &#34;)
+        print(&#34; SHAPES:&#34;)
+        dataloader = DataLoader(
+            self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size
+        )
+        print(f&#34;    Input shape (images): {self.get_input_shape()}&#34;)
+        print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+        print(next(iter(dataloader)).images.shape)
+
+        print(f&#34;    Output shape (responses): {self.get_output_shape()}&#34;)
+        print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+        print(next(iter(dataloader)).responses.shape)
+
+        print(&#34; LENGTH:&#34;)
+        print(f&#34;    Length of the dataset is {len(self)}&#34;)
+        print(f&#34;    Length of the train set is {self.train_len()}&#34;)
+        print(f&#34;    Length of the val set is {self.val_len()}&#34;)
+        print(f&#34;    Length of the test set is {self.test_len()}&#34;)
+
+        print(&#34; -------------------------------------- &#34;)
+
+    def train_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The train DataLoader
+        &#34;&#34;&#34;       
+        return DataLoader(
+            self.dat,
+            sampler=self.train_random_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def val_dataloader(self):
+        &#34;&#34;&#34;
+        Validation data are in the variable train_data 
+        (but the indices are splitted to self.val_sampler)
+
+        Returns:
+            DataLoader: The validation DataLoader
+        &#34;&#34;&#34;   
+        return DataLoader(
+            self.dat,
+            sampler=self.val_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def test_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The test DataLoader
+        &#34;&#34;&#34;  
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def get_oracle_dataloader(
+        self, toy_data=False, oracle_condition=None, verbose=False
+        ):
+        &#34;&#34;&#34;Returns the dataset for oracle computations and averaged trials evaluation.
+
+        Args:
+            toy_data (bool, optional): Whether to use a small subset of data. Defaults to False.
+            oracle_condition (_type_, optional): Conditions to limit the oracle. Defaults to None.
+            verbose (bool, optional): Whether to be verbose or not. Defaults to False.
+
+        Raises:
+            ValueError: Problems with loading the oracle dataset.
+
+        Returns:
+            DataLoader: The test DataLoader with batch_size=10
+        &#34;&#34;&#34;
+
+        if toy_data:
+            condition_hashes = self.dat.info.condition_hash
+        else:
+            dat_info = self.dat.trial_info
+            if &#34;image_id&#34; in dir(dat_info):
+                condition_hashes = dat_info.image_id
+                image_class = dat_info.image_class
+            elif &#34;colorframeprojector_image_id&#34; in dir(dat_info):
+                condition_hashes = dat_info.colorframeprojector_image_id
+                image_class = dat_info.colorframeprojector_image_class
+            elif &#34;frame_image_id&#34; in dir(dat_info):
+                # gets here in this if else tree
+                condition_hashes = dat_info.frame_image_id
+                image_class = dat_info.frame_image_class
+            else:
+                raise ValueError(
+                    &#34;&#39;image_id&#39; &#39;colorframeprojector_image_id&#39;, or &#39;frame_image_id&#39; have to present in the dataset under dat.info &#34;
+                    &#34;in order to load get the oracle repeats.&#34;
+                )
+
+        max_idx = condition_hashes.max() + 1
+        classes, class_idx = np.unique(image_class, return_inverse=True)
+        identifiers = condition_hashes + class_idx * max_idx
+
+        dat_tiers = self.dat.trial_info.tiers
+        sampling_condition = (
+            np.where(dat_tiers == &#34;test&#34;)[0]
+            if oracle_condition is None
+            else np.where((dat_tiers == &#34;test&#34;) &amp; (class_idx == oracle_condition))[0]
+        )
+        if (oracle_condition is not None) and verbose:
+            print(
+                &#34;Created Testloader for image class {}&#34;.format(
+                    classes[oracle_condition]
+                )
+            )
+
+        # IDENTIFIERS ARE WHERE THINGS ARE NOT UNIQUE
+
+        sampler = RepeatsBatchSampler(identifiers, sampling_condition)
+        return DataLoader(self.dat, batch_sampler=sampler)
+
+    def get_correlations(
+        self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs
+    ):
+        &#34;&#34;&#34;Computes the correlations. Do not use this method, deprecated.
+        &#34;&#34;&#34;    
+        correlations = {}
+        for k, v in dataloaders.items():
+            target, output = self.model_predictions(
+                dataloader=v, model=model, data_key=k
+            )
+            correlations[k] = corr(target, output, axis=0, eps=1e-12)
+
+            if np.any(np.isnan(correlations[k])):
+                print(
+                    &#34;{}% NaNs , NaNs will be set to Zero.&#34;.format(
+                        np.isnan(correlations[k]).mean() * 100
+                    )
+                )
+            correlations[k][np.isnan(correlations[k])] = 0
+
+        if not as_dict:
+            correlations = (
+                np.hstack([v for v in correlations.values()])
+                if per_neuron
+                else np.mean(np.hstack([v for v in correlations.values()]))
+            )
+        return correlations
+
+    def model_predictions(self, model, dataloader, data_key):   
+        &#34;&#34;&#34;
+        Computes model predictions for a given dataloader and a model.
+        Do not use this method, deprecated.
+        Returns:
+            tuple: (target, output)
+                - target: ground truth, i.e. neuronal firing rates of the neurons
+                - output: responses as predicted by the network
+        &#34;&#34;&#34;
+
+        target, output = torch.empty(0), torch.empty(0)
+        for images, responses in dataloader:
+            # returns in batches.. for example images.shape = [10, 1, 36, 64]
+            if len(images.shape) == 5:
+                images = images.squeeze(dim=0)
+                responses = responses.squeeze(dim=0)
+            with torch.no_grad():
+                # the outputs and targets get concatenated into a veeeery long tensor
+                output = torch.cat((output, (model(images).detach().cpu())), dim=0)
+                target = torch.cat((target, responses.detach().cpu()), dim=0)
+
+        # on oracle dataloader returns both of shape (999, 5335), because 999 is test_len and 5335 is number_of_neurons
+        # or for dm.val_dataloader() returns (522, 5335), where 522 is dm.val_len()
+        return target.numpy(), output.numpy()
+
+    def return_test_sampler(self, oracle_condition=None, get_key=False):
+        &#34;&#34;&#34;
+
+        Args:
+            oracle_condition (_type_, optional): To limit the oracle. Defaults to None.
+            get_key (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            tuple or dict: The test sampler
+        &#34;&#34;&#34;        
+        print(&#34;Returning only test sampler with repeats...&#34;)
+        dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
+        return (
+            (self.data_key, {&#34;test&#34;: dataloader}) if get_key else {&#34;test&#34;: dataloader}
+        )
+
+    def predict_dataloader(self):
+        &#34;&#34;&#34;
+        Returns:
+            DataLoader: The test DataLoader
+        &#34;&#34;&#34;   
+        return DataLoader(
+            self.dat,
+            sampler=self.test_sampler,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+    def model_performances(self, model=None, trainer=None, control_measures=None):
+        &#34;&#34;&#34;Evaluates the model and prints the results
+
+        Args:
+            model (pl.model, optional): Model to be evaluated. Defaults to None.
+            trainer (pl.trainer, optional): The trainer that performs the evaluation. Defaults to None.
+            control_measures (dict, optional): The control model&#39;s measures to be compared with our evaluated model. Defaults to None.
+
+        Returns:
+            dict: Dictionary of the resulting measures.
+        &#34;&#34;&#34;
+        model.test_average_batch = False
+        model.compute_oracle_fraction = False
+        val_score = trainer.test(model, self.val_dataloader(), verbose=False)
+        test_score = trainer.test(model, self.test_dataloader(), verbose=False)
+
+        model.test_average_batch = True
+        model.compute_oracle_fraction = True
+        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
+
+        val_score = val_score[0]
+        test_score = test_score[0]
+        test_repeats_averaged_score = test_repeats_averaged_score[0]
+
+        print(&#34;Validation dataset:&#34;)
+        print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(val_score[&#39;test/corr&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (val_score[&#39;test/corr&#39;] / control_measures[&#39;val/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+
+        # print(&#34;Test dataset:&#34;)
+        # print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_score[&#39;test/corr&#39;]) }&#34;)
+
+        print(&#34;Test dataset with averaged responses of repeated trials:&#34;)
+        print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;]) } {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;] / control_measures[&#39;test/repeated_trials/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+        print(f&#34;    Fraction oracle conservative: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;] / control_measures[&#39;test/fraction_oracle_conservative&#39;])) if control_measures else &#39;&#39;}&#34;)
+        print(f&#34;    Fraction oracle jackknife: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;] / control_measures[&#39;test/fraction_oracle_jackknife&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+        returned_measures = {
+            &#34;val/corr&#34;: val_score[&#39;test/corr&#39;],
+            &#34;test/repeated_trials/corr&#34;: test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;],
+            &#34;test/fraction_oracle_conservative&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;],
+            &#34;test/fraction_oracle_jackknife&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;]
+        }
+
+        return returned_measures</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pytorch_lightning.core.datamodule.LightningDataModule</li>
+<li>pytorch_lightning.core.hooks.CheckpointHooks</li>
+<li>pytorch_lightning.core.hooks.DataHooks</li>
+<li>pytorch_lightning.core.mixins.hparams_mixin.HyperparametersMixin</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="Lurz_dataset.LurzDataModule.name"><code class="name">var <span class="ident">name</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="Lurz_dataset.LurzDataModule.get_correlations"><code class="name flex">
+<span>def <span class="ident">get_correlations</span></span>(<span>self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the correlations. Do not use this method, deprecated.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_correlations(
+    self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs
+):
+    &#34;&#34;&#34;Computes the correlations. Do not use this method, deprecated.
+    &#34;&#34;&#34;    
+    correlations = {}
+    for k, v in dataloaders.items():
+        target, output = self.model_predictions(
+            dataloader=v, model=model, data_key=k
+        )
+        correlations[k] = corr(target, output, axis=0, eps=1e-12)
+
+        if np.any(np.isnan(correlations[k])):
+            print(
+                &#34;{}% NaNs , NaNs will be set to Zero.&#34;.format(
+                    np.isnan(correlations[k]).mean() * 100
+                )
+            )
+        correlations[k][np.isnan(correlations[k])] = 0
+
+    if not as_dict:
+        correlations = (
+            np.hstack([v for v in correlations.values()])
+            if per_neuron
+            else np.mean(np.hstack([v for v in correlations.values()]))
+        )
+    return correlations</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.get_input_shape"><code class="name flex">
+<span>def <span class="ident">get_input_shape</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_input_shape(self):
+    return self.dat[0].images.shape</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.get_mean"><code class="name flex">
+<span>def <span class="ident">get_mean</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the mean response of the train dataset. If it is available
+in a locally generated file, it loads it from there. Otherwise it
+computes it and then it stores it into the file for the future use.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>torch.Tensor</code></dt>
+<dd>Mean responses of the neurons.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_mean(self):
+    &#34;&#34;&#34;Computes the mean response of the train dataset. If it is available
+    in a locally generated file, it loads it from there. Otherwise it
+    computes it and then it stores it into the file for the future use.
+
+    Returns:
+        torch.Tensor: Mean responses of the neurons.
+    &#34;&#34;&#34;
+
+    mean_path = pathlib.Path(self.data_dir + &#34;/mean.npy&#34;)
+
+    if mean_path.exists():
+        mean = np.load(mean_path)
+        print(&#34;Loaded precomputed mean from &#34; + str(mean_path))
+        return torch.from_numpy(mean)
+
+    dataloader = DataLoader(
+        self.dat, sampler=self.train_sequential_sampler, batch_size=self.batch_size
+    )
+    summed = torch.zeros(self.get_output_shape())
+    for d in dataloader:
+        summed += torch.sum(d.responses, 0)
+
+    mean = summed / self.train_len()
+
+    np.save(mean_path, mean)
+    print(&#34;Created mean array to &#34; + str(mean_path))
+    return mean</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.get_mean_fast"><code class="name flex">
+<span>def <span class="ident">get_mean_fast</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the mean response of the validation dataset (much smaller than the train dataset and thus much quicker). If it is available
+in a locally generated file, it loads it from there. Otherwise it
+computes it and then it stores it into the file for the future use.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>torch.Tensor</code></dt>
+<dd>Mean responses of the neurons.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_mean_fast(self):
+    &#34;&#34;&#34;Computes the mean response of the validation dataset (much smaller than the train dataset and thus much quicker). If it is available
+    in a locally generated file, it loads it from there. Otherwise it
+    computes it and then it stores it into the file for the future use.
+
+    Returns:
+        torch.Tensor: Mean responses of the neurons.
+    &#34;&#34;&#34;   
+    dataloader = DataLoader(
+        self.dat, sampler=self.val_sampler, batch_size=self.batch_size
+    )
+    summed = torch.zeros(self.get_output_shape())
+    for d in dataloader:
+        summed += torch.sum(d.responses, 0)
+
+    mean = summed / self.train_len()
+    return mean</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.get_oracle_dataloader"><code class="name flex">
+<span>def <span class="ident">get_oracle_dataloader</span></span>(<span>self, toy_data=False, oracle_condition=None, verbose=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the dataset for oracle computations and averaged trials evaluation.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>toy_data</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to use a small subset of data. Defaults to False.</dd>
+<dt><strong><code>oracle_condition</code></strong> :&ensp;<code>_type_</code>, optional</dt>
+<dd>Conditions to limit the oracle. Defaults to None.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to be verbose or not. Defaults to False.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>Problems with loading the oracle dataset.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataLoader</code></dt>
+<dd>The test DataLoader with batch_size=10</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_oracle_dataloader(
+    self, toy_data=False, oracle_condition=None, verbose=False
+    ):
+    &#34;&#34;&#34;Returns the dataset for oracle computations and averaged trials evaluation.
+
+    Args:
+        toy_data (bool, optional): Whether to use a small subset of data. Defaults to False.
+        oracle_condition (_type_, optional): Conditions to limit the oracle. Defaults to None.
+        verbose (bool, optional): Whether to be verbose or not. Defaults to False.
+
+    Raises:
+        ValueError: Problems with loading the oracle dataset.
+
+    Returns:
+        DataLoader: The test DataLoader with batch_size=10
+    &#34;&#34;&#34;
+
+    if toy_data:
+        condition_hashes = self.dat.info.condition_hash
+    else:
+        dat_info = self.dat.trial_info
+        if &#34;image_id&#34; in dir(dat_info):
+            condition_hashes = dat_info.image_id
+            image_class = dat_info.image_class
+        elif &#34;colorframeprojector_image_id&#34; in dir(dat_info):
+            condition_hashes = dat_info.colorframeprojector_image_id
+            image_class = dat_info.colorframeprojector_image_class
+        elif &#34;frame_image_id&#34; in dir(dat_info):
+            # gets here in this if else tree
+            condition_hashes = dat_info.frame_image_id
+            image_class = dat_info.frame_image_class
+        else:
+            raise ValueError(
+                &#34;&#39;image_id&#39; &#39;colorframeprojector_image_id&#39;, or &#39;frame_image_id&#39; have to present in the dataset under dat.info &#34;
+                &#34;in order to load get the oracle repeats.&#34;
+            )
+
+    max_idx = condition_hashes.max() + 1
+    classes, class_idx = np.unique(image_class, return_inverse=True)
+    identifiers = condition_hashes + class_idx * max_idx
+
+    dat_tiers = self.dat.trial_info.tiers
+    sampling_condition = (
+        np.where(dat_tiers == &#34;test&#34;)[0]
+        if oracle_condition is None
+        else np.where((dat_tiers == &#34;test&#34;) &amp; (class_idx == oracle_condition))[0]
+    )
+    if (oracle_condition is not None) and verbose:
+        print(
+            &#34;Created Testloader for image class {}&#34;.format(
+                classes[oracle_condition]
+            )
+        )
+
+    # IDENTIFIERS ARE WHERE THINGS ARE NOT UNIQUE
+
+    sampler = RepeatsBatchSampler(identifiers, sampling_condition)
+    return DataLoader(self.dat, batch_sampler=sampler)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.get_output_shape"><code class="name flex">
+<span>def <span class="ident">get_output_shape</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_output_shape(self):
+    return self.dat[0].responses.shape</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.model_performances"><code class="name flex">
+<span>def <span class="ident">model_performances</span></span>(<span>self, model=None, trainer=None, control_measures=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluates the model and prints the results</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>model</code></strong> :&ensp;<code>pl.model</code>, optional</dt>
+<dd>Model to be evaluated. Defaults to None.</dd>
+<dt><strong><code>trainer</code></strong> :&ensp;<code>pl.trainer</code>, optional</dt>
+<dd>The trainer that performs the evaluation. Defaults to None.</dd>
+<dt><strong><code>control_measures</code></strong> :&ensp;<code>dict</code>, optional</dt>
+<dd>The control model's measures to be compared with our evaluated model. Defaults to None.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>Dictionary of the resulting measures.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def model_performances(self, model=None, trainer=None, control_measures=None):
+    &#34;&#34;&#34;Evaluates the model and prints the results
+
+    Args:
+        model (pl.model, optional): Model to be evaluated. Defaults to None.
+        trainer (pl.trainer, optional): The trainer that performs the evaluation. Defaults to None.
+        control_measures (dict, optional): The control model&#39;s measures to be compared with our evaluated model. Defaults to None.
+
+    Returns:
+        dict: Dictionary of the resulting measures.
+    &#34;&#34;&#34;
+    model.test_average_batch = False
+    model.compute_oracle_fraction = False
+    val_score = trainer.test(model, self.val_dataloader(), verbose=False)
+    test_score = trainer.test(model, self.test_dataloader(), verbose=False)
+
+    model.test_average_batch = True
+    model.compute_oracle_fraction = True
+    test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
+
+    val_score = val_score[0]
+    test_score = test_score[0]
+    test_repeats_averaged_score = test_repeats_averaged_score[0]
+
+    print(&#34;Validation dataset:&#34;)
+    print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(val_score[&#39;test/corr&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (val_score[&#39;test/corr&#39;] / control_measures[&#39;val/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+
+    # print(&#34;Test dataset:&#34;)
+    # print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_score[&#39;test/corr&#39;]) }&#34;)
+
+    print(&#34;Test dataset with averaged responses of repeated trials:&#34;)
+    print(f&#34;    Correlation: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;]) } {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;] / control_measures[&#39;test/repeated_trials/corr&#39;])) if control_measures else &#39;&#39;}&#34;)
+    print(f&#34;    Fraction oracle conservative: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;] / control_measures[&#39;test/fraction_oracle_conservative&#39;])) if control_measures else &#39;&#39;}&#34;)
+    print(f&#34;    Fraction oracle jackknife: {&#39;{:.4f}&#39;.format(test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;])} {&#39;({:.2f} percent of the control model)&#39;.format(100 * (test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;] / control_measures[&#39;test/fraction_oracle_jackknife&#39;])) if control_measures else &#39;&#39;}&#34;)
+
+    returned_measures = {
+        &#34;val/corr&#34;: val_score[&#39;test/corr&#39;],
+        &#34;test/repeated_trials/corr&#34;: test_repeats_averaged_score[&#39;test/repeated_trials/corr&#39;],
+        &#34;test/fraction_oracle_conservative&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_conservative&#39;],
+        &#34;test/fraction_oracle_jackknife&#34;:test_repeats_averaged_score[&#39;test/fraction_oracle_jackknife&#39;]
+    }
+
+    return returned_measures</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.model_predictions"><code class="name flex">
+<span>def <span class="ident">model_predictions</span></span>(<span>self, model, dataloader, data_key)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes model predictions for a given dataloader and a model.
+Do not use this method, deprecated.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>(target, output)
+- target: ground truth, i.e. neuronal firing rates of the neurons
+- output: responses as predicted by the network</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def model_predictions(self, model, dataloader, data_key):   
+    &#34;&#34;&#34;
+    Computes model predictions for a given dataloader and a model.
+    Do not use this method, deprecated.
+    Returns:
+        tuple: (target, output)
+            - target: ground truth, i.e. neuronal firing rates of the neurons
+            - output: responses as predicted by the network
+    &#34;&#34;&#34;
+
+    target, output = torch.empty(0), torch.empty(0)
+    for images, responses in dataloader:
+        # returns in batches.. for example images.shape = [10, 1, 36, 64]
+        if len(images.shape) == 5:
+            images = images.squeeze(dim=0)
+            responses = responses.squeeze(dim=0)
+        with torch.no_grad():
+            # the outputs and targets get concatenated into a veeeery long tensor
+            output = torch.cat((output, (model(images).detach().cpu())), dim=0)
+            target = torch.cat((target, responses.detach().cpu()), dim=0)
+
+    # on oracle dataloader returns both of shape (999, 5335), because 999 is test_len and 5335 is number_of_neurons
+    # or for dm.val_dataloader() returns (522, 5335), where 522 is dm.val_len()
+    return target.numpy(), output.numpy()</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.predict_dataloader"><code class="name flex">
+<span>def <span class="ident">predict_dataloader</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataLoader</code></dt>
+<dd>The test DataLoader</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def predict_dataloader(self):
+    &#34;&#34;&#34;
+    Returns:
+        DataLoader: The test DataLoader
+    &#34;&#34;&#34;   
+    return DataLoader(
+        self.dat,
+        sampler=self.test_sampler,
+        batch_size=self.batch_size,
+        num_workers=self.num_workers,
+    )</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.prepare_data"><code class="name flex">
+<span>def <span class="ident">prepare_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Downloads the data (if not downloaded yet) and unzips them (if not unzipped yet).</p>
+<p>In this method, as the documentation of Pytorch Lightning states,
+we should not do anything like self.x = y # = assign state</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def prepare_data(self):
+    &#34;&#34;&#34;Downloads the data (if not downloaded yet) and unzips them (if not unzipped yet).
+
+    In this method, as the documentation of Pytorch Lightning states,
+    we should not do anything like self.x = y # = assign state
+    &#34;&#34;&#34;
+    path = pathlib.Path(self.data_dir)
+
+    if not path.exists():
+        print(&#34;We have to download and prepare the data.&#34;)
+        print(&#34;This might take a long time (~1 hour).&#34;)
+        print(
+            f&#34;Downloading and extracting the dataset from {self._URL} to folder {self.data_dir}.&#34;,
+            file=sys.stderr,
+        )
+        wget.download(self._URL)
+
+        print(
+            f&#34;\nUnzipping the dataset to a temporary folder ./tmp_lurz_extracted.&#34;,
+            file=sys.stderr,
+        )
+        with zipfile.ZipFile(&#34;Lurz2020-master.zip&#34;, &#34;r&#34;) as zip_ref:
+            zip_ref.extractall(&#34;tmp_lurz_extracted&#34;)
+
+        pathlib.Path(self.data_dir).mkdir(parents=True)
+
+        print(
+            f&#34;Copying the temporarily unzipped folder to the specified path&#34;,
+            file=sys.stderr,
+        )
+        copy_tree(
+            &#34;./tmp_lurz_extracted/lurz2020/static20457-5-9-preproc0&#34;, str(path)
+        )
+        print(
+            f&#34;Removing the temporary folder and the downloaded .zip file.&#34;,
+            file=sys.stderr,
+        )
+        shutil.rmtree(&#34;tmp_lurz_extracted&#34;)
+        os.remove(&#34;Lurz2020-master.zip&#34;)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.print_dataset_info"><code class="name flex">
+<span>def <span class="ident">print_dataset_info</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a train dataloader, gets first piece of data and prints its shape</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def print_dataset_info(self):
+    &#34;&#34;&#34;Creates a train dataloader, gets first piece of data and prints its shape
+    &#34;&#34;&#34;
+    print(&#34; ------------ DATASET INFO ------------ &#34;)
+    print(&#34; SHAPES:&#34;)
+    dataloader = DataLoader(
+        self.dat, sampler=self.train_random_sampler, batch_size=self.batch_size
+    )
+    print(f&#34;    Input shape (images): {self.get_input_shape()}&#34;)
+    print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+    print(next(iter(dataloader)).images.shape)
+
+    print(f&#34;    Output shape (responses): {self.get_output_shape()}&#34;)
+    print(&#34;    With batch size also: &#34;, end=&#34;&#34;)
+    print(next(iter(dataloader)).responses.shape)
+
+    print(&#34; LENGTH:&#34;)
+    print(f&#34;    Length of the dataset is {len(self)}&#34;)
+    print(f&#34;    Length of the train set is {self.train_len()}&#34;)
+    print(f&#34;    Length of the val set is {self.val_len()}&#34;)
+    print(f&#34;    Length of the test set is {self.test_len()}&#34;)
+
+    print(&#34; -------------------------------------- &#34;)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.return_test_sampler"><code class="name flex">
+<span>def <span class="ident">return_test_sampler</span></span>(<span>self, oracle_condition=None, get_key=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>oracle_condition</code></strong> :&ensp;<code>_type_</code>, optional</dt>
+<dd>To limit the oracle. Defaults to None.</dd>
+<dt><strong><code>get_key</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd><em>description</em>. Defaults to False.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code> or <code>dict</code></dt>
+<dd>The test sampler</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def return_test_sampler(self, oracle_condition=None, get_key=False):
+    &#34;&#34;&#34;
+
+    Args:
+        oracle_condition (_type_, optional): To limit the oracle. Defaults to None.
+        get_key (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        tuple or dict: The test sampler
+    &#34;&#34;&#34;        
+    print(&#34;Returning only test sampler with repeats...&#34;)
+    dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
+    return (
+        (self.data_key, {&#34;test&#34;: dataloader}) if get_key else {&#34;test&#34;: dataloader}
+    )</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.setup"><code class="name flex">
+<span>def <span class="ident">setup</span></span>(<span>self, stage: Optional[str] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Sets up the dataset, loads it, shuffles it and sets up the sampler.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>stage</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>Possible values are 'fit, 'test',</dd>
+</dl>
+<p>'predict' or None. None means both 'fit' and 'test'. If 'fit', the
+method sets up only the train dataset. If 'test', it sets up only
+the train dataset. If 'predict', it sets up the train dataset.
+Defaults to None.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def setup(self, stage: Optional[str] = None):
+    &#34;&#34;&#34;Sets up the dataset, loads it, shuffles it and sets up the sampler.
+
+    Args:
+        stage (Optional[str], optional): Possible values are &#39;fit, &#39;test&#39;,
+        &#39;predict&#39; or None. None means both &#39;fit&#39; and &#39;test&#39;. If &#39;fit&#39;, the
+        method sets up only the train dataset. If &#39;test&#39;, it sets up only
+        the train dataset. If &#39;predict&#39;, it sets up the train dataset.
+        Defaults to None.
+    &#34;&#34;&#34;
+
+    # we use only FileTreeDataset (no StaticImageSet) as it was turn on by default
+    self.dat = (
+        FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;, &#34;behavior&#34;)
+        if self.include_behavior
+        else FileTreeDataset(self.data_dir, &#34;images&#34;, &#34;responses&#34;)
+    )
+
+    # following lines all copied
+    # original comment:
+    # The permutation MUST be added first and the conditions below MUST NOT be based on the original order
+    # specify condition(s) for sampling neurons. If you want to sample specific neurons define conditions that would effect idx
+    conds = np.ones(len(self.dat.neurons.area), dtype=bool)
+    if self.areas is not None:
+        conds &amp;= np.isin(self.dat.neurons.area, self.areas)
+    if self.layers is not None:
+        conds &amp;= np.isin(self.dat.neurons.layer, self.layers)
+    idx = np.where(conds)[0]
+    if self.neuron_n is not None:
+        random_state = np.random.get_state()
+        if self.neuron_base_seed is not None:
+            np.random.seed(
+                self.neuron_base_seed * self.neuron_n
+            )  # avoid nesting by making seed dependent on number of neurons
+        assert (
+            len(self.dat.neurons.unit_ids) &gt;= self.exclude_neuron_n + self.neuron_n
+        ), &#34;After excluding {} neurons, there are not {} neurons left&#34;.format(
+            self.exclude_neuron_n, self.neuron_n
+        )
+        self.neuron_ids = np.random.choice(
+            self.dat.neurons.unit_ids,
+            size=self.exclude_neuron_n + self.neuron_n,
+            replace=False,
+        )[self.exclude_neuron_n :]
+        np.random.set_state(random_state)
+    if self.neuron_ids is not None:
+        idx = [
+            np.where(self.dat.neurons.unit_ids == unit_id)[0][0]
+            for unit_id in self.neuron_ids
+        ]
+
+    # following lines all copied (but tensors don&#39;t go to cuda)
+    # transforms .. ToTensor -&gt; no Cuda as it handles the Trainer from Pytorch Lightning
+    self.more_transforms = [Subsample(idx), ToTensor(cuda=False)]
+    if self.normalize:
+        self.more_transforms.insert(
+            0, NeuroNormalizer(self.dat, exclude=self.exclude)
+        )
+
+    if self.include_behavior:
+        self.more_transforms.insert(0, AddBehaviorAsChannels())
+
+    if self.select_input_channel is not None:
+        self.more_transforms.insert(
+            0, SelectInputChannel(self.select_input_channel)
+        )
+
+    # add transforms to the dataset
+    self.dat.transforms.extend(self.more_transforms)
+
+    # These two lines changed
+    # tier_array = dat.trial_info.tiers if file_tree else dat.tiers
+    # image_id_array = dat.trial_info.frame_image_id if file_tree else dat.info.frame_image_id
+    # to these lines:
+    tier_array = self.dat.trial_info.tiers
+    image_id_array = self.dat.trial_info.frame_image_id
+
+    # no return of test_sampler (deleted)
+
+    # the rest of this method was altered a little bit just because of the
+    # previous decisions - there are no &#34;tiers&#34;, we create train, val test
+    # based on stage variable. So only the &#34;decision logic&#34; is a little different
+    # (if conditions), but the functionality is basicly the same
+
+    # for creating the separate datasets, we choose ids and create a SubsetSampler
+    # that samples the correct images
+
+    # train, test and val datasets are later created based on
+
+    # Assign train/val datasets for use in dataloaders
+    if stage == &#34;fit&#34; or stage == &#34;predict&#34; or stage is None:
+        subset_idx_train = None
+        subset_idx_val = np.where(tier_array == &#34;validation&#34;)[0]
+
+        if self.image_ids is not None:
+            subset_idx_train = [
+                np.where(image_id_array == image_id)[0][0]
+                for image_id in self.image_ids
+            ]
+            assert (
+                sum(tier_array[subset_idx_train] != &#34;train&#34;) == 0
+            ), &#34;image_ids contain validation or test images&#34;
+        elif self.image_n is not None:
+            random_state = np.random.get_state()
+            if self.image_base_seed is not None:
+                np.random.seed(
+                    self.image_base_seed * self.image_n
+                )  # avoid nesting by making seed dependent on number of images
+            subset_idx_train = np.random.choice(
+                np.where(tier_array == &#34;train&#34;)[0], size=self.image_n, replace=False
+            )
+            np.random.set_state(random_state)
+        else:
+            subset_idx_train = np.where(tier_array == &#34;train&#34;)[0]
+
+        self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
+        self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
+
+        self.val_sampler = SubsetSequentialSampler(subset_idx_val)
+
+    if stage == &#34;test&#34; or stage is None:
+        subset_idx_test = np.where(tier_array == &#34;test&#34;)[0]
+        self.test_sampler = SubsetSequentialSampler(subset_idx_test)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.test_dataloader"><code class="name flex">
+<span>def <span class="ident">test_dataloader</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataLoader</code></dt>
+<dd>The test DataLoader</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_dataloader(self):
+    &#34;&#34;&#34;
+    Returns:
+        DataLoader: The test DataLoader
+    &#34;&#34;&#34;  
+    return DataLoader(
+        self.dat,
+        sampler=self.test_sampler,
+        batch_size=self.batch_size,
+        num_workers=self.num_workers,
+    )</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.test_len"><code class="name flex">
+<span>def <span class="ident">test_len</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def test_len(self):
+    return len(self.test_sampler)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.train_dataloader"><code class="name flex">
+<span>def <span class="ident">train_dataloader</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataLoader</code></dt>
+<dd>The train DataLoader</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def train_dataloader(self):
+    &#34;&#34;&#34;
+    Returns:
+        DataLoader: The train DataLoader
+    &#34;&#34;&#34;       
+    return DataLoader(
+        self.dat,
+        sampler=self.train_random_sampler,
+        batch_size=self.batch_size,
+        num_workers=self.num_workers,
+    )</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.train_len"><code class="name flex">
+<span>def <span class="ident">train_len</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def train_len(self):
+    return len(self.train_random_sampler)</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.val_dataloader"><code class="name flex">
+<span>def <span class="ident">val_dataloader</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Validation data are in the variable train_data
+(but the indices are splitted to self.val_sampler)</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>DataLoader</code></dt>
+<dd>The validation DataLoader</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def val_dataloader(self):
+    &#34;&#34;&#34;
+    Validation data are in the variable train_data 
+    (but the indices are splitted to self.val_sampler)
+
+    Returns:
+        DataLoader: The validation DataLoader
+    &#34;&#34;&#34;   
+    return DataLoader(
+        self.dat,
+        sampler=self.val_sampler,
+        batch_size=self.batch_size,
+        num_workers=self.num_workers,
+    )</code></pre>
+</details>
+</dd>
+<dt id="Lurz_dataset.LurzDataModule.val_len"><code class="name flex">
+<span>def <span class="ident">val_len</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def val_len(self):
+    return len(self.val_sampler)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="Lurz_dataset.RepeatsBatchSampler"><code class="flex name class">
+<span>class <span class="ident">RepeatsBatchSampler</span></span>
+<span>(</span><span>keys, subset_index=None, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Base class for all Samplers.</p>
+<p>Every Sampler subclass has to provide an :meth:<code>__iter__</code> method, providing a
+way to iterate over indices of dataset elements, and a :meth:<code>__len__</code> method
+that returns the length of the returned iterators.</p>
+<div class="admonition note">
+<p class="admonition-title">Note:&ensp;The :meth:<code>__len__</code> method isn't strictly required by</p>
+<p>:class:<code>~torch.utils.data.DataLoader</code>, but is expected in any
+calculation involving the length of a :class:<code>~torch.utils.data.DataLoader</code>.</p>
+</div>
+<p>A batch sampler where each batch consists of all samples with identical keys value.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>keys</code></strong> :&ensp;<code>Any</code></dt>
+<dd>list of keys used to group indicies.</dd>
+<dt><strong><code>subset_index</code></strong> :&ensp;<code>list</code> of <code>indices</code>, optional</dt>
+<dd>List of indices to subselect entries from keys.
+Defaults to None, where all indices from keys are used.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RepeatsBatchSampler(Sampler):
+    def __init__(self, keys, subset_index=None, **kwargs):
+        &#34;&#34;&#34;A batch sampler where each batch consists of all samples with identical keys value.
+
+        Args:
+            keys (Any): list of keys used to group indicies.
+            subset_index (list of indices, optional): List of indices to subselect entries from keys.
+                            Defaults to None, where all indices from keys are used.
+        &#34;&#34;&#34;
+        if subset_index is None:
+            subset_index = np.arange(len(keys))
+        _, inv = np.unique(
+            keys[subset_index], return_inverse=True
+        )  # assigns a batch to each trial
+        self.repeat_index = np.unique(inv)  # on which index we are at
+        self.repeat_sets = inv
+        self.subset_index = subset_index
+        self.batch_size = 10
+        # self.batch_size = self.repeat_sets
+
+    def __iter__(self):
+        for u in self.repeat_index:
+            self.batch_size = len(list(self.subset_index[self.repeat_sets == u]))
+            yield list(self.subset_index[self.repeat_sets == u])
+
+    def __len__(self):
+        return len(self.repeat_index)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>torch.utils.data.sampler.Sampler</li>
+<li>typing.Generic</li>
+</ul>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="Lurz_dataset.LurzDataModule" href="#Lurz_dataset.LurzDataModule">LurzDataModule</a></code></h4>
+<ul class="">
+<li><code><a title="Lurz_dataset.LurzDataModule.get_correlations" href="#Lurz_dataset.LurzDataModule.get_correlations">get_correlations</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.get_input_shape" href="#Lurz_dataset.LurzDataModule.get_input_shape">get_input_shape</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.get_mean" href="#Lurz_dataset.LurzDataModule.get_mean">get_mean</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.get_mean_fast" href="#Lurz_dataset.LurzDataModule.get_mean_fast">get_mean_fast</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.get_oracle_dataloader" href="#Lurz_dataset.LurzDataModule.get_oracle_dataloader">get_oracle_dataloader</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.get_output_shape" href="#Lurz_dataset.LurzDataModule.get_output_shape">get_output_shape</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.model_performances" href="#Lurz_dataset.LurzDataModule.model_performances">model_performances</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.model_predictions" href="#Lurz_dataset.LurzDataModule.model_predictions">model_predictions</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.name" href="#Lurz_dataset.LurzDataModule.name">name</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.predict_dataloader" href="#Lurz_dataset.LurzDataModule.predict_dataloader">predict_dataloader</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.prepare_data" href="#Lurz_dataset.LurzDataModule.prepare_data">prepare_data</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.print_dataset_info" href="#Lurz_dataset.LurzDataModule.print_dataset_info">print_dataset_info</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.return_test_sampler" href="#Lurz_dataset.LurzDataModule.return_test_sampler">return_test_sampler</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.setup" href="#Lurz_dataset.LurzDataModule.setup">setup</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.test_dataloader" href="#Lurz_dataset.LurzDataModule.test_dataloader">test_dataloader</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.test_len" href="#Lurz_dataset.LurzDataModule.test_len">test_len</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.train_dataloader" href="#Lurz_dataset.LurzDataModule.train_dataloader">train_dataloader</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.train_len" href="#Lurz_dataset.LurzDataModule.train_len">train_len</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.val_dataloader" href="#Lurz_dataset.LurzDataModule.val_dataloader">val_dataloader</a></code></li>
+<li><code><a title="Lurz_dataset.LurzDataModule.val_len" href="#Lurz_dataset.LurzDataModule.val_len">val_len</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="Lurz_dataset.RepeatsBatchSampler" href="#Lurz_dataset.RepeatsBatchSampler">RepeatsBatchSampler</a></code></h4>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
