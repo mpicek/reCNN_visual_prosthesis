@@ -81,7 +81,7 @@ setting up a training of a given model with a connection to Wandb.
 [present_best_models.py](present_best_models.html) is a file that is supposed to run an evaluation on the best
 models and print the obtained results.
 
-Files [train_on_lurz.py](train_on_lurz.html) , `train_on_antolik.py` are files that are used to setup a training
+Files [train_on_lurz.py](train_on_lurz.html) , [train_on_antolik.py](train_on_antolik.html) are files that are used to setup a training
 of our model on Lurz's or Antolik's data.
 
 Files [train_control_model_on_lurz_dataset.py](train_control_model_on_lurz_dataset.html), [train_control_model_on_antolik_dataset.py](train_control_model_on_antolik_dataset.html) setup training
