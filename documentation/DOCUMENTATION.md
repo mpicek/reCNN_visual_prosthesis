@@ -1,13 +1,14 @@
 # Software documentation
 
+In this document, we briefly describe the used libraries, the authors of the code, and source files in this
+repository. To see a detailed description of each file's classes, methods, functions etc.,
+we refer the reader to the individual .html files in this directory.
+
 ## Utilized libraries
 
 The code in this repository is based on the following two fundamental libraries:
  - [neuralpredictors](https://github.com/sinzlab/neuralpredictors)
  - [predict_neural_responses](https://github.com/lucabaroni/predict_neural_responses)
-
-In this document, we describe how these libraries are incorporated in the code
-along with a brief description of other folders and files in this repository.
 
 ### predict_neural_responses
 
@@ -30,11 +31,11 @@ This library is mostly imported as a regular Python module by our scripts.
 
 However, we also copied some pieces of this library and extended them for our
 purposes. To be concrete, the following files reuse some code from Neuralpredictors:
- - `Lurz_dataset.py` - This is a reimplementation of Lurz's dataset that can be used with newer versions of Neuralpredictors library.
+ - [Lurz_dataset.py](Lurz_dataset.html) - This is a reimplementation of Lurz's dataset that can be used with newer versions of Neuralpredictors library.
 Moreover, it implements Pytorch Lightning LightningDataModule so that we can handle it more conveniently.
- - `core.py` - we copied class `RotationEquivariant2dCore` from `layers/cores/conv2d.py` located in Neuralpredictors. Then we modified
+ - [core.py](core.html) - we copied class `RotationEquivariant2dCore` from `layers/cores/conv2d.py` located in Neuralpredictors. Then we modified
 it for our purposes.
- - `readout.py` - similarly to `core.py`, `readout.py` contains a class `Gaussian3dCyclic` 
+ - [readout.py](readout.html) - similarly to [core.py](core.html), [readout.py](readout.html) contains a class `Gaussian3dCyclic` 
 that was made from `Gaussian3d` class in `layers/readouts/gaussian.py` from Neuralpredictors. It was extended and modified
 for the purposes of our work.
 
@@ -68,28 +69,26 @@ A folder with multiple configuration files that were used for wandb sweeps.
 
 ## Description of files in the root directory of this repository
 
-`Antolik_dataset.py` and `Lurz_dataset.py` contain classes for work with datasets.
+[Antolik_dataset.py](Antolik_dataset.html) and [Lurz_dataset.py](Lurz_dataset.html) contain classes for work with datasets.
 
-`core.py`, `readout.py` contain the developed core and readout.
+[core.py](core.html), [readout.py](readout.html) contain the developed core and readout.
 
-`model_trainer.py` is a file with a purpose of preparing the datasets and 
+[model_trainer.py](model_trainer.html) is a file with a purpose of preparing the datasets and 
 setting up a training of a given model with a connection to Wandb.
 
-`models.py` contains developed models including the most important one: `reCNN_bottleneck_CyclicGauss3d`
+[models.py](models.html) contains developed models including the most important one: `reCNN_bottleneck_CyclicGauss3d`
 
-`present_best_models.py` is a file that is supposed to run an evaluation on the best
+[present_best_models.py](present_best_models.html) is a file that is supposed to run an evaluation on the best
 models and print the obtained results.
 
-Files `train_on_lurz.py`, `train_on_antolik.py` are files that are used to setup a training
+Files [train_on_lurz.py](train_on_lurz.html) , `train_on_antolik.py` are files that are used to setup a training
 of our model on Lurz's or Antolik's data.
 
-Files `train_control_model_on_lurz_dataset.py`, `train_control_model_on_antolik_dataset.py` setup training
+Files [train_control_model_on_lurz_dataset.py](train_control_model_on_lurz_dataset.html), [train_control_model_on_antolik_dataset.py](train_control_model_on_antolik_dataset.html) setup training
 of the control model on Lurz's and Antolik's dataset.
 
-`train_antolik_test.py` trains only on Antolik's test set.
+[train_antolik_test.py](train_antolik_test.html) trains only on Antolik's test set.
 
-`utils.py` provides utilities that can be used in the code.
+[utils.py](utils.html) provides utilities that can be used in the code.
 
-`graph_generator.py` is a script for generating figures for the thesis.
-
-`create_ensemble.py` is a file that aggregates multiple models and creates an ensemble.
+[create_ensemble.py](create_ensemble.html) is a file that aggregates multiple models and creates an ensemble.
