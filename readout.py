@@ -7,14 +7,18 @@ import warnings
 
 class Gaussian3dCyclic(readouts.Readout):
     """
-    This readout instantiates an object that can used to learn a point in the core feature space for each neuron,
+    This readout instantiates an object that can be used to learn a point in the core feature space for each neuron,
     sampled from a Gaussian distribution with some mean and variance at train but set to mean at test time, that best predicts its response.
+
+    In the third dimension, the Gaussian distribution is cyclical, therefore when it gets out of the range [-1, 1], it gets
+    back to a cyclically corresponding position (1.5 = -0.5).
 
     The readout receives the shape of the core as 'in_shape', the number of units/neurons being predicted as 'outdims', 'bias' specifying whether
     or not bias term is to be used and 'init_range' range for initialising the mean and variance of the gaussian distribution from which we sample to
     uniform distribution, U(-init_mu_range,init_mu_range) and  uniform distribution, U(0.0, init_sigma_range) respectively.
     The grid parameter contains the normalized locations (x, y coordinates in the core feature space) and is clipped to [-1.1] as it a
-    requirement of the torch.grid_sample function. The feature parameter learns the best linear mapping between the feature
+    requirement of the torch.grid_sample function. The third parameter of the grid is the orientation, which is cyclical, as
+    stated above. The feature parameter learns the best linear mapping between the feature
     map from a given location, sample from Gaussian at train time but set to mean at eval time, and the unit's response with or without an additional elu non-linearity.
 
     Args:
@@ -46,6 +50,28 @@ class Gaussian3dCyclic(readouts.Readout):
         gamma_readout=None,  # depricated, use feature_reg_weight instead
         **kwargs,
     ):
+        """The constructor
+
+        Args:
+            in_shape (list): shape of the input feature map [channels, width, height]
+            outdims (int): number of output units
+            bias (bool): adds a bias term
+            init_mu_range (float): initialises the the mean with Uniform([-init_range, init_range])
+                                [expected: positive value <=1]
+            init_sigma_range (float): initialises sigma with Uniform([0.0, init_sigma_range]).
+                    It is recommended however to use a fixed initialization, for faster convergence.
+                    For this, set fixed_sigma to True.
+            batch_sample (bool): if True, samples a position for each image in the batch separately
+                                [default: True as it decreases convergence time and performs just as well]
+            fixed_sigma (bool). Recommended behavior: True. But set to false for backwards compatibility.
+                    If true, initialized the sigma not in a range, but with the exact value given for all neurons.
+            mean_activity (tensor, optional): Tensor of mean activity of the neurons. Defaults to None.
+            feature_reg_weight (float, optional): Regularization strength for the readout. Defaults to 1.0.
+            gamma_readout (float, optional): Regularization for the readout. DO NOT USE, DEPRECATED Defaults to None.
+
+        Raises:
+            ValueError: If init_mu_range or init_sigma_range are not within required limit
+        """
         super().__init__()
         if init_mu_range > 1.0 or init_mu_range <= 0.0 or init_sigma_range <= 0.0:
             raise ValueError(
@@ -80,8 +106,8 @@ class Gaussian3dCyclic(readouts.Readout):
         self.initialize(mean_activity)
 
     def sample_grid(self, batch_size, sample=None): # significantly edited
-        """
-        Returns the grid locations from the core by sampling from a Gaussian distribution
+        """Returns the grid locations from the core by sampling from a Gaussian distribution
+        
         Args:
             batch_size (int): size of the batch
             sample (bool/None): sample determines whether we draw a sample from Gaussian distribution, N(mu,sigma), defined per neuron
@@ -129,6 +155,11 @@ class Gaussian3dCyclic(readouts.Readout):
         return self.sample_grid(batch_size=1, sample=False)
 
     def initialize(self, mean_activity=None):
+        """Initializes the readout.
+
+        Args:
+            mean_activity (tensor, optional): Tensor of mean activity of the neurons. Defaults to None.
+        """
         if mean_activity is None:
             mean_activity = self.mean_activity
         self.mu.data.uniform_(-self.init_mu_range, self.init_mu_range)
@@ -148,8 +179,8 @@ class Gaussian3dCyclic(readouts.Readout):
         return 0
 
     def forward(self, x, sample=None, shift=None, out_idx=None, **kwargs): # edited
-        """
-        Propagates the input forwards through the readout
+        """Propagates the input forwards through the readout
+        
         Args:
             x: input data
             sample (bool/None): sample determines whether we draw a sample from Gaussian distribution, N(mu,sigma), defined per neuron
@@ -161,7 +192,7 @@ class Gaussian3dCyclic(readouts.Readout):
             out_idx (bool): index of neurons to be predicted
 
         Returns:
-            y: neuronal activity
+            y (tensor): neuronal activity
         """
 
         N, c, w, h = x.size()

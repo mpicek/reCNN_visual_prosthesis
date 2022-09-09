@@ -10,7 +10,7 @@ import glob
 import torch.nn as nn
 import torch
 import pytorch_lightning as pl
-from models import reCNN_bottleneck_CyclicGauss3d, Lurz_Baseline
+from models import reCNN_bottleneck_CyclicGauss3d, Lurz_Control_Model
 from pytorch_lightning.loggers import WandbLogger
 
 
@@ -25,13 +25,28 @@ class AggregateModel(ExtendedEncodingModel):
         self.models = nn.ModuleList(models_list)
 
     def forward(self, x):
+        """Aggregates outputs from the models (from which the ensemble consists of)
+        and returns an average as an ensembles output.
+
+        Args:
+            x (pytorch.tensor): Input tensor
+
+        Returns:
+            pytorch.tensor: Average of individual models' outputs.
+        """
         x = torch.mean(torch.stack([m(x) for m in self.models], -1), dim=-1)
         return x
 
 def download_model(model_name, run):
-    """
-        Downloads a model from Weights & Biases and returns it.
-    """
+    """Downloads a model from Weights & Biases and returns it.
+
+    Args:
+        model_name (str): The whole name of the model
+        run (wandb.run): Run of the wandb.
+
+    Returns:
+        pl.model: Pytorch model downloaded from wandb.
+    """    
     artifact = run.use_artifact(model_name, type="model")
     artifact_dir = artifact.download()
 
@@ -47,8 +62,14 @@ def download_model(model_name, run):
     return m
 
 def download_control_model(model_name, run):
-    """
-        Downloads a control model from Weights & Biases and returns it.
+    """Downloads a control model from Weights & Biases and returns it.
+
+    Args:
+        model_name (str): The whole name of the control model
+        run (wandb.run): Run of the wandb.
+
+    Returns:
+        pl.model: Pytorch control model downloaded from wandb.
     """
     artifact = run.use_artifact(model_name, type="model")
     artifact_dir = artifact.download()
@@ -58,17 +79,26 @@ def download_control_model(model_name, run):
     model_checkpoint_path = glob.glob(artifact_dir + "/*.ckpt")[0]
     print(model_checkpoint_path)
 
-    m = Lurz_Baseline.load_from_checkpoint(model_checkpoint_path)
+    m = Lurz_Control_Model.load_from_checkpoint(model_checkpoint_path)
 
     print(f"Model from {model_checkpoint_path} loaded!")
 
     return m
 
 def create_ensemble(model_names, config, run, model_name_prefix="", model_name_suffix=""):
-    """
-        Given models' names, it downloads them and creates an ensemble from them.
-        The ensemble model is subsequently returned
-    """
+    """Given models' names, it downloads them and creates an ensemble from them.
+        The ensemble model is subsequently returned.
+
+    Args:
+        model_names (list): List of strings of full model names.
+        config (dict): Dictionary with the config for the models
+        run (wandb.run): Run of the wandb.
+        model_name_prefix (str, optional): Prefix of the models' names. Defaults to "".
+        model_name_suffix (str, optional): Suffix of the models' names. Defaults to "".
+
+    Returns:
+        _type_: _description_
+    """    
 
     models = []
 

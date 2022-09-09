@@ -48,8 +48,7 @@ logger = logging.getLogger(__name__)
 
 class RepeatsBatchSampler(Sampler):
     def __init__(self, keys, subset_index=None, **kwargs):
-        """
-        Batch sampler where each batch consists of all samples with identical keys value.
+        """A batch sampler where each batch consists of all samples with identical keys value.
 
         Args:
             keys (Any): list of keys used to group indicies.
@@ -77,8 +76,7 @@ class RepeatsBatchSampler(Sampler):
 
 
 class LurzDataModule(pl.LightningDataModule):
-    """
-    Based on Lurz 2020 code - mouse_loaders.py.
+    """Based on Lurz 2020 code - mouse_loaders.py.
     We work with just one dataset (not multiple), therefore static_loaders were
     ignored, we worked only with ONE static_loader.
     Furthermore, static_shared_loaders were also ignored.
@@ -175,8 +173,11 @@ class LurzDataModule(pl.LightningDataModule):
         )
 
     def prepare_data(self):
-        # we should not do anything like self.x = y # = assign state
-        # just download the data
+        """Downloads the data (if not downloaded yet) and unzips them (if not unzipped yet).
+
+        In this method, as the documentation of Pytorch Lightning states,
+        we should not do anything like self.x = y # = assign state
+        """
         path = pathlib.Path(self.data_dir)
 
         if not path.exists():
@@ -212,8 +213,15 @@ class LurzDataModule(pl.LightningDataModule):
             os.remove("Lurz2020-master.zip")
 
     def setup(self, stage: Optional[str] = None):
-        # stage is "fit" or "test" or "predict"
-        # when stage=None -> both "fit" and "test"
+        """Sets up the dataset, loads it, shuffles it and sets up the sampler.
+
+        Args:
+            stage (Optional[str], optional): Possible values are 'fit, 'test',
+            'predict' or None. None means both 'fit' and 'test'. If 'fit', the
+            method sets up only the train dataset. If 'test', it sets up only
+            the train dataset. If 'predict', it sets up the train dataset.
+            Defaults to None.
+        """
 
         # we use only FileTreeDataset (no StaticImageSet) as it was turn on by default
         self.dat = (
@@ -335,7 +343,13 @@ class LurzDataModule(pl.LightningDataModule):
         return self.dat[0].responses.shape
 
     def get_mean_fast(self):
-        """Computes the mean response of the validation dataset (much smaller than the train set)"""
+        """Computes the mean response of the validation dataset (much smaller than the train dataset and thus much quicker). If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        """   
         dataloader = DataLoader(
             self.dat, sampler=self.val_sampler, batch_size=self.batch_size
         )
@@ -347,7 +361,13 @@ class LurzDataModule(pl.LightningDataModule):
         return mean
 
     def get_mean(self):
-        """Computes the mean response of the train dataset"""
+        """Computes the mean response of the train dataset. If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        """
 
         mean_path = pathlib.Path(self.data_dir + "/mean.npy")
 
@@ -379,12 +399,15 @@ class LurzDataModule(pl.LightningDataModule):
         return len(self.test_sampler)
 
     def __len__(self):
-        """The length of ALL the data we have (train + val + test)"""
+        """The length of ALL the data we have (train + val + test)
+
+        Returns:
+            int: The length of ALL the data we have (train + val + test)
+        """      
         return len(self.dat)
 
     def print_dataset_info(self):
-        """
-        Creates a train dataloader, gets first piece of data and prints its shape
+        """Creates a train dataloader, gets first piece of data and prints its shape
         """
         print(" ------------ DATASET INFO ------------ ")
         print(" SHAPES:")
@@ -408,6 +431,10 @@ class LurzDataModule(pl.LightningDataModule):
         print(" -------------------------------------- ")
 
     def train_dataloader(self):
+        """
+        Returns:
+            DataLoader: The train DataLoader
+        """       
         return DataLoader(
             self.dat,
             sampler=self.train_random_sampler,
@@ -416,6 +443,13 @@ class LurzDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """
+        Validation data are in the variable train_data 
+        (but the indices are splitted to self.val_sampler)
+
+        Returns:
+            DataLoader: The validation DataLoader
+        """   
         return DataLoader(
             self.dat,
             sampler=self.val_sampler,
@@ -424,6 +458,10 @@ class LurzDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
+        """
+        Returns:
+            DataLoader: The test DataLoader
+        """  
         return DataLoader(
             self.dat,
             sampler=self.test_sampler,
@@ -433,7 +471,20 @@ class LurzDataModule(pl.LightningDataModule):
 
     def get_oracle_dataloader(
         self, toy_data=False, oracle_condition=None, verbose=False
-    ):
+        ):
+        """Returns the dataset for oracle computations and averaged trials evaluation.
+
+        Args:
+            toy_data (bool, optional): Whether to use a small subset of data. Defaults to False.
+            oracle_condition (_type_, optional): Conditions to limit the oracle. Defaults to None.
+            verbose (bool, optional): Whether to be verbose or not. Defaults to False.
+
+        Raises:
+            ValueError: Problems with loading the oracle dataset.
+
+        Returns:
+            DataLoader: The test DataLoader with batch_size=10
+        """
 
         if toy_data:
             condition_hashes = self.dat.info.condition_hash
@@ -480,6 +531,8 @@ class LurzDataModule(pl.LightningDataModule):
     def get_correlations(
         self, model, dataloaders, as_dict=False, per_neuron=True, **kwargs
     ):
+        """Computes the correlations. Do not use this method, deprecated.
+        """    
         correlations = {}
         for k, v in dataloaders.items():
             target, output = self.model_predictions(
@@ -503,12 +556,14 @@ class LurzDataModule(pl.LightningDataModule):
             )
         return correlations
 
-    def model_predictions(self, model, dataloader, data_key):
+    def model_predictions(self, model, dataloader, data_key):   
         """
-        computes model predictions for a given dataloader and a model
+        Computes model predictions for a given dataloader and a model.
+        Do not use this method, deprecated.
         Returns:
-            target: ground truth, i.e. neuronal firing rates of the neurons
-            output: responses as predicted by the network
+            tuple: (target, output)
+                - target: ground truth, i.e. neuronal firing rates of the neurons
+                - output: responses as predicted by the network
         """
 
         target, output = torch.empty(0), torch.empty(0)
@@ -527,6 +582,15 @@ class LurzDataModule(pl.LightningDataModule):
         return target.numpy(), output.numpy()
 
     def return_test_sampler(self, oracle_condition=None, get_key=False):
+        """
+
+        Args:
+            oracle_condition (_type_, optional): To limit the oracle. Defaults to None.
+            get_key (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            tuple or dict: The test sampler
+        """        
         print("Returning only test sampler with repeats...")
         dataloader = self.get_oracle_dataloader(oracle_condition=oracle_condition)
         return (
@@ -534,6 +598,10 @@ class LurzDataModule(pl.LightningDataModule):
         )
 
     def predict_dataloader(self):
+        """
+        Returns:
+            DataLoader: The test DataLoader
+        """   
         return DataLoader(
             self.dat,
             sampler=self.test_sampler,
@@ -542,6 +610,16 @@ class LurzDataModule(pl.LightningDataModule):
         )
 
     def model_performances(self, model=None, trainer=None, control_measures=None):
+        """Evaluates the model and prints the results
+
+        Args:
+            model (pl.model, optional): Model to be evaluated. Defaults to None.
+            trainer (pl.trainer, optional): The trainer that performs the evaluation. Defaults to None.
+            control_measures (dict, optional): The control model's measures to be compared with our evaluated model. Defaults to None.
+
+        Returns:
+            dict: Dictionary of the resulting measures.
+        """
         model.test_average_batch = False
         model.compute_oracle_fraction = False
         val_score = trainer.test(model, self.val_dataloader(), verbose=False)

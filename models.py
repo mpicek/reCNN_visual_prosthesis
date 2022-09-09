@@ -53,6 +53,18 @@ class ExtendedEncodingModel(encoding_model):
         return 0
 
     def training_step(self, batch, batch_idx):
+        """Defines what to do at each training step.
+        Gets the batch, passes it through the network, updates weights,
+        computes loss and regularization, logs important metrics and
+        returns regularized loss.
+
+        Args:
+            batch (tuple): tuple of (imgs, responses)
+            batch_idx (int): Index of the batch
+
+        Returns:
+            float: Regularized loss
+        """
         img, resp = batch
         prediction = self.forward(img)
         loss = self.loss(prediction, resp)
@@ -64,11 +76,18 @@ class ExtendedEncodingModel(encoding_model):
         return regularized_loss
 
     def validation_step(self, batch, batch_idx):
-        """
-        - We just get prediction and return them with target. Later in validation_epoch_end,
-            we compute the correlation on the whole validation set (and not on separate
-            batches with final averaging)
-        """
+        """Defines what to do at each validation step.
+        We just get prediction and return them with target. Later in self.validation_epoch_end,
+        we compute the correlation on the whole validation set (and not on separate
+        batches with final averaging)
+
+        Args:
+            batch (tuple): tuple of (imgs, responses)
+            batch_idx (int): Index of the batch
+
+        Returns:
+            tuple: (prediction of responses, true responses)
+        """        
 
         img, resp = batch
         prediction = self.forward(img)
@@ -86,6 +105,14 @@ class ExtendedEncodingModel(encoding_model):
         - We just get prediction and return them with target. Later in validation_epoch_end,
             we compute the correlation on the whole validation set (and not on separate
             batches with final averaging).
+
+        Args:
+            batch (tuple): tuple of (imgs, responses). The images might be all the
+                same in case of the oracle dataset for evaluation of the averaged trial correlation.
+            batch_idx (int): Index of the batch
+
+        Returns:
+            tuple: (prediction of responses, true responses of each trial (might be averaged), true responses of each trial (never averaged))
         """
 
         img, resp = batch
@@ -102,13 +129,20 @@ class ExtendedEncodingModel(encoding_model):
         return prediction, resp, responses_no_mean
 
     def configure_optimizers(self):
+        """Configures the optimizer for the training of the model (Adam).
+
+        Returns:
+            torch.optimizer: torch optimizer class
+        """
         opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
         return opt
 
     def test_epoch_end(self, test_outs):
-        """
-        We compute the correlation on the whole set. Predictions with target
-        responses are in test_outs (= what each test_step() returned)
+        """We compute a correlation on the WHOLE test set. Predictions with target
+        responses are in test_outs (= what each self.test_step() returned)
+
+        Args:
+            test_outs (list): What each self.test_step() returned
         """
         pred = []
         resp = []
@@ -168,10 +202,12 @@ class ExtendedEncodingModel(encoding_model):
                 self.log("test/fraction_oracle_conservative", fraction_of_oracles[0])
 
     def validation_epoch_end(self, val_outs):
-        """
-        We compute the correlation on the whole set. Predictions with target
+        """We compute the correlation on the whole set. Predictions with target
         responses are in val_outs (= what each val_step() returned)
-        """
+
+        Args:
+            val_outs (list): What each self.validation_step() returned
+        """        
         pred = []
         resp = []
         for (p, r) in val_outs:
@@ -185,6 +221,9 @@ class ExtendedEncodingModel(encoding_model):
 
 
 class reCNN_FullFactorized(ExtendedEncodingModel):
+    """Rotation-equivariant CNN with a Full factorized readout.
+    """
+
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
@@ -294,6 +333,8 @@ class reCNN_FullFactorized(ExtendedEncodingModel):
 
 
 class reCNN_Gauss2D(ExtendedEncodingModel):
+    """Rotation-equivariant CNN with a 2d Gaussian readout.
+    """
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
@@ -502,7 +543,7 @@ class reCNN_bottleneck_NoReadout(ExtendedEncodingModel):
 
 
 class LurzReimplementation(ExtendedEncodingModel):
-    """Lurz's model"""
+    """Reimplementation of the original Lurz's model."""
 
     def __init__(self, **config):
         super().__init__(**config)
@@ -678,8 +719,8 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
         return reg_term
 
 
-class Lurz_Baseline(ExtendedEncodingModel):
-    """Lurz's model used as a baseline model"""
+class Lurz_Control_Model(ExtendedEncodingModel):
+    """Lurz's model used as a control model"""
 
     def __init__(self, **config):
         super().__init__(**config)

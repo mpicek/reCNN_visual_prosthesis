@@ -12,7 +12,15 @@ from torchvision import transforms
 
 
 class AntolikDataset(Dataset):
+    """A class for handling with the Antolik's synthetic dataset."""    
+
     def __init__(self, path, normalize=True):
+        """The constructor.
+
+        Args:
+            path (str): Path to the dataset
+            normalize (bool, optional): Whether to normalize the images. Defaults to True.
+        """
         self.normalize = normalize
 
         self.data = self.pickle_read(path)
@@ -22,6 +30,14 @@ class AntolikDataset(Dataset):
         )
 
     def __getitem__(self, index):
+        """Gets the index-th pair of visual stimulus and response to the stimulus.
+
+        Args:
+            index (int): the index
+
+        Returns:
+            (np.array, np.array): The index-th pair of visual stimulus and response to the stimulus.
+        """
         x = self.data[index]["stimulus"]
         x = np.expand_dims(x, axis=0)
         y = np.concatenate(
@@ -37,9 +53,22 @@ class AntolikDataset(Dataset):
         return (data.float(), target.float())
 
     def __len__(self):
+        """
+
+        Returns:
+            int: The length of the dataset
+        """
         return len(self.data)
 
     def pickle_read(self, path):
+        """A helper function to unpickle the dataset.
+
+        Args:
+            path (str): Path to the dataset
+
+        Returns:
+            The dataset.
+        """
         with open(path, "rb") as f:
             x = pickle.load(f)
         return x
@@ -47,7 +76,8 @@ class AntolikDataset(Dataset):
 
 class AntolikDataModule(pl.LightningDataModule):
     """
-    Has to be downloaded from the wintermute server.
+    Warning! Has to be downloaded from the wintermute server!
+    A Pytorch Lightning module that uses Antolik's dataset.
     """
 
     def __init__(
@@ -60,6 +90,16 @@ class AntolikDataModule(pl.LightningDataModule):
         num_workers=0,
         val_size=5000,
     ):
+        """The constructor.
+
+        Args:
+            train_data_dir (str): Path to the train dataset
+            test_data_dir (str): Path to the test dataset
+            batch_size (int): Batch size
+            normalize (bool, optional): Whether to normalize the input images. Defaults to True.
+            num_workers (int, optional): Number of workers that load the dataset. Defaults to 0.
+            val_size (int, optional): Validation dataset length. Defaults to 5000.
+        """
         super().__init__()
         self.train_data_dir = train_data_dir
         self.test_data_dir = test_data_dir
@@ -70,10 +110,14 @@ class AntolikDataModule(pl.LightningDataModule):
         self.val_size = val_size
 
     def prepare_data(self):
-        """
-        We do not have public access to the data. This function will be implemented
+        """We do not have public access to the data. This function will be implemented
         when the dataset is available on some website.
-        """
+
+        Raises:
+            Exception: The train .pickle file does not exist
+            Exception: The test .pickle file does not exist
+        """        
+
         # we should not do anything like self.x = y # = assign state
         # just download the data
         train_path = pathlib.Path(self.train_data_dir)
@@ -90,6 +134,15 @@ class AntolikDataModule(pl.LightningDataModule):
             )
 
     def setup(self, stage: Optional[str] = None):
+        """Sets up the dataset, loads it, shuffles it and sets up the sampler.
+
+        Args:
+            stage (Optional[str], optional): Possible values are 'fit, 'test',
+            'predict' or None. None means both 'fit' and 'test'. If 'fit', the
+            method sets up only the train dataset. If 'test', it sets up only
+            the train dataset. If 'predict', it sets up the train dataset.
+            Defaults to None.
+        """
         # stage is "fit" or "test" or "predict"
         # when stage=None -> both "fit" and "test"
 
@@ -134,7 +187,13 @@ class AntolikDataModule(pl.LightningDataModule):
         return y[0].shape
 
     def get_mean(self):
-        """Computes the mean response of the train dataset"""
+        """Computes the mean response of the train dataset. If it is available
+        in a locally generated file, it loads it from there. Otherwise it
+        computes it and then it stores it into the file for the future use.
+
+        Returns:
+            torch.Tensor: Mean responses of the neurons.
+        """        
 
         mean_path = pathlib.Path(
             self.train_data_dir.rsplit(".pickle", 1)[0] + "_mean.npy"
@@ -171,12 +230,15 @@ class AntolikDataModule(pl.LightningDataModule):
         return len(self.test_sampler)
 
     def __len__(self):
-        """The length of ALL the data we have (train + val + test)"""
+        """The length of ALL the data we have (train + val + test)
+
+        Returns:
+            int: The length of ALL the data we have (train + val + test)
+        """        
         return self.train_len() + self.val_len() + self.test_len()
 
     def print_dataset_info(self):
-        """
-        Creates a train dataloader, gets first piece of data and prints its shape
+        """Creates a train dataloader, gets first piece of data and prints its shape
         """
         print(" ------------ DATASET INFO ------------ ")
         print(" SHAPES:")
@@ -202,6 +264,10 @@ class AntolikDataModule(pl.LightningDataModule):
         print(" -------------------------------------- ")
 
     def train_dataloader(self):
+        """
+        Returns:
+            DataLoader: The train DataLoader
+        """        
         return DataLoader(
             self.train_dataset,
             sampler=self.train_random_sampler,
@@ -210,7 +276,13 @@ class AntolikDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        # validation data are in the variable train_data (but the indices are splitted to self.val_sampler)
+        """
+        Validation data are in the variable train_data 
+        (but the indices are splitted to self.val_sampler)
+
+        Returns:
+            DataLoader: The validation DataLoader
+        """   
         return DataLoader(
             self.train_dataset,
             sampler=self.val_sampler,
@@ -219,6 +291,10 @@ class AntolikDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
+        """
+        Returns:
+            DataLoader: The test DataLoader
+        """   
         return DataLoader(
             self.test_dataset,
             sampler=self.test_sampler,
@@ -227,7 +303,12 @@ class AntolikDataModule(pl.LightningDataModule):
         )
 
     def get_oracle_dataloader(self):
-        # the only difference from test_dataloader is that we hardcode batch_size=10
+        """the only difference from test_dataloader is that we hardcode batch_size=10
+
+        Returns:
+            DataLoader: The test DataLoader with batch_size=10
+        """
+        
         return DataLoader(
             self.test_dataset,
             sampler=self.test_sampler,
@@ -236,6 +317,16 @@ class AntolikDataModule(pl.LightningDataModule):
         )
 
     def model_performances(self, model=None, trainer=None, control_measures=None):
+        """Evaluates the model and prints the results
+
+        Args:
+            model (pl.model, optional): Model to be evaluated. Defaults to None.
+            trainer (pl.trainer, optional): The trainer that performs the evaluation. Defaults to None.
+            control_measures (dict, optional): The control model's measures to be compared with our evaluated model. Defaults to None.
+
+        Returns:
+            dict: Dictionary of the resulting measures.
+        """
         model.test_average_batch = False
         model.compute_oracle_fraction = False
         val_score = trainer.test(model, self.val_dataloader(), verbose=False)

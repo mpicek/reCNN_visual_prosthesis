@@ -19,6 +19,16 @@ def get_best_model(
     model_class=reCNN_bottleneck_CyclicGauss3d,
     model_artifact_name="reCNN_bottleneck_CyclicGauss3d",
 ):
+    """Returns the best model
+
+    Args:
+        wandb_run (wandb.run): Wandb run for logging
+        model_class (class, optional): The class of the model. Defaults to reCNN_bottleneck_CyclicGauss3d.
+        model_artifact_name (str, optional): Name of the artifact of the model. Defaults to "reCNN_bottleneck_CyclicGauss3d".
+
+    Returns:
+        pl.model: The best model
+    """
 
     if model_artifact_name == None:
         model_artifact_name = model_class.__str__()
@@ -32,10 +42,17 @@ def get_best_model(
 
 
 def Lurz_dataset_preparation_function(config, run=None):
-    """
-        Gets config, can edit it.
+    """Gets config, can edit it.
         Returns Pytorch Lightning DataModule of the dataset from Lurz's publication
-    """
+
+    Args:
+        config (dict): Configuration dictionary
+        run (wandb.run, optional): Wandb run for logging. If None, nothing is logged. Defaults to None.
+
+    Returns:
+        pl.DataModule: Pytorch Lightning DataModule of the dataset.
+    """    
+
     # setup datamodule - use artifact
     data_dir = "data/lurz2020/static20457-5-9-preproc0"
 
@@ -69,11 +86,16 @@ def Lurz_dataset_preparation_function(config, run=None):
 
 
 def Antolik_dataset_preparation_function_test(config, run=None):
-    """
-        Gets config, can edit it.
+    """Gets config, can edit it.
         Uses only Antolik's in-silico test dataset (for both train and test), therefore
             the loading is much quicker.
-        Returns Pytorch Lightning DataModule
+
+    Args:
+        config (dict): Configuration dictionary
+        run (wandb.run, optional): Wandb run for logging. If None, nothing is logged. Defaults to None.
+
+    Returns:
+        pl.DataModule: Pytorch Lightning DataModule of the dataset.
     """
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
@@ -109,10 +131,17 @@ def Antolik_dataset_preparation_function_test(config, run=None):
 
 
 def Antolik_dataset_preparation_function(config, run=None):
+    """Gets config, can edit it.
+        Uses only Antolik's in-silico dataset
+
+    Args:
+        config (dict): Configuration dictionary
+        run (wandb.run, optional): Wandb run for logging. If None, nothing is logged. Defaults to None.
+
+    Returns:
+        pl.DataModule: Pytorch Lightning DataModule of the dataset.
     """
-        Gets config, can edit it.
-        Returns Pytorch Lightning DataModule of the Antolik's in-silico dataset
-    """
+
 
     path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
     path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
@@ -159,10 +188,24 @@ def run_wandb_training(
     model_checkpoint_mode="max",
     # **config,
 ):
-    """
-        Sets up a dataset and a model, sets up wandb session and runs a model
+    """Sets up a dataset and a model, sets up wandb session and runs a model
         training with the help of Wandb. Subsequently it evaluates the model
         and prints the results.
+
+    Args:
+        config (dict): Configuration dictionary
+        dataset_preparation_function (function): A function that sets up the dataset
+        entity (str): Name of the wandb user.
+        project (str): Name of the wandb project
+        model_artifact_name (str, optional): Name of the wandb artifact for the model. Defaults to None.
+        model_class (class, optional): A class of the model. Defaults to reCNN_FullFactorized.
+        early_stopping_monitor (str, optional): A measure which is watched and based on which the early stopping of the training occurs. Defaults to "val/corr".
+        early_stopping_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about the early stopping. Defaults to "max".
+        model_checkpoint_monitor (str, optional): A measure which is watched and based on which the best model is decided. Defaults to "val/corr".
+        model_checkpoint_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about best model. Defaults to "max".
+
+    Returns:
+        _type_: _description_
     """
 
     pl.seed_everything(config["seed"], workers=True)

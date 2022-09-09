@@ -30,6 +30,16 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         bottleneck_padding=None,  # added
         **kwargs,
     ):
+        """The constructor.
+
+        Args:
+            num_rotations (int, optional): Number of rotations to which the reCNN should be equivariant. Defaults to 8.
+            stride (int, optional): By how many pixels should the convolutional kernel jump during convolving the image. Defaults to 1.
+            upsampling (int, optional): How much to unsample. Defaults to 2.
+            rot_eq_batch_norm (bool, optional): Whether to use batch norm or not. Defaults to True.
+            input_regularizer (str, optional): Input layer regularizer. Defaults to "LaplaceL2norm".
+            bottleneck_kernel (int, optional): Size of the bottleneck kernel. Defaults to 3.
+        """
         self.num_rotations = num_rotations
         self.stride = stride
         self.upsampling = upsampling
@@ -39,6 +49,10 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         super().__init__(*args, **kwargs, input_regularizer=input_regularizer)
 
     def set_batchnorm_type(self):
+        """Sets up the batchnorm layer.
+
+        This function was taken from Neuralpredictors library.
+        """
         if not self.rot_eq_batch_norm:
             self.batchnorm_layer_cls = nn.BatchNorm2d
             self.bias_layer_cls = Bias2DLayer
@@ -55,6 +69,10 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
             )
 
     def add_first_layer(self):
+        """Adds the first layer into the reCNN core, adds batchnorm layer and activation.
+        
+        This function was taken from Neuralpredictors library.
+        """
         layer = OrderedDict()
         layer["hermite_conv"] = HermiteConv2D(
             input_features=self.input_channels,
@@ -70,10 +88,15 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         self.add_activation(layer)
         self.features.add_module("layer0", nn.Sequential(layer))
 
-    def add_bottleneck_bn_layer(self, layer):  # added
-        """
-        Same as add_bn_layer(), but self.hidden_channels are replaced by 1
-        """
+    def add_bottleneck_bn_layer(self, layer):
+        """Same as self.add_bn_layer(), but self.hidden_channels are replaced by 1
+        so that we restrict the number of channels in the last layer to one and
+        create a bottleneck.
+
+        Args:
+            layer (OrderedDict): An ordered dictionary that sequentially aggregates
+            the layers from which the bottleneck will be created (hermiteConv2d, batch_norm, activation_function)
+        """        
         if self.batch_norm:
             if self.independent_bn_bias:
                 layer["norm"] = self.batchnorm_layer_cls(1, momentum=self.momentum)
@@ -89,9 +112,10 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
                 elif self.batch_norm_scale:
                     layer["scale"] = self.scale_layer_cls(1)
 
-    def add_bottleneck_layer(self):  # added
+    def add_bottleneck_layer(self):
         """
-        Adds the bottleneck layer (into self.features)
+        Adds the bottleneck layer (into self.features). It also appends
+        a batch_norm layer and an activation.
         """
 
         layer = OrderedDict()
@@ -110,17 +134,22 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
             first_layer=False,
         )
 
-        self.add_bottleneck_bn_layer(layer)  # add the bottleneck bn_layer
+        self.add_bottleneck_bn_layer(layer)  # add the bottleneck bn_layer at the end
         self.add_activation(layer)
         self.features.add_module("bottleneck_layer", nn.Sequential(layer))
 
     def add_activation(self, layer):
         """
-        Overwritten only one line. Original:
+        This function was taken from Neuralpredictors library and altered for our purposes.
+        Specifically only one lines were overwritten. Original:
             if len(self.features) < self.num_layers - 1 or self.final_nonlinearity:
         Now:
             if len(self.features) < self.num_layers or self.final_nonlinearity:
-        """
+
+        Args:
+            layer (OrderedDict): An ordered dictionary that sequentially aggregates
+            the layers from which the bottleneck will be created (hermiteConv2d, batch_norm, activation_function)
+        """        
 
         if self.linear:
             return
@@ -128,6 +157,9 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
             layer["nonlin"] = AdaptiveELU(self.elu_xshift, self.elu_yshift)
 
     def add_subsequent_layers(self):  # edited
+        """
+        This function was taken from Neuralpredictors library.
+        """
         if not isinstance(self.hidden_kern, Iterable):
             self.hidden_kern = [self.hidden_kern] * (self.num_layers - 1)
 
@@ -172,11 +204,21 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
             nn.init.normal_(m.coeffs.data, std=0.1)
 
     def laplace(self):
+        """Regularizes the weights with Laplace filter regularization.
+
+        Returns:
+            float: Penalty regularization value.
+        """
         return self._input_weights_regularizer(
             self.features[0].hermite_conv.weights_all_rotations, avg=self.use_avg_reg
         )
 
     def group_sparsity(self):
+        """Regularizes the weights with group sparsity regularization.
+
+        Returns:
+            float: Penalty regularization value.
+        """
         ret = 0
         for l in range(1, self.num_layers):
             ret = (
@@ -191,11 +233,21 @@ class RotationEquivariant2dCoreBottleneck(Stacked2dCore, nn.Module):
         return ret / ((self.num_layers - 1) if self.num_layers > 1 else 1)
 
     def regularizer(self):
+        """Regularizes the reCNN core.
+
+        Returns:
+            float: The regularization penalty value.
+        """
         return (
             self.group_sparsity() * self.gamma_hidden
             + self.gamma_input * self.laplace()
         )
 
     @property
-    def outchannels(self):  # edited .. returns just 1 channel for each rotation
+    def outchannels(self):
+        """Reused from neuralpredictors, edited.
+
+        Returns:
+            int: returns just 1 channel for each rotation
+        """
         return self.num_rotations

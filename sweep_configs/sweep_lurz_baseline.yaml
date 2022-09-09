@@ -1,4 +1,4 @@
-program: train_lurz_baseline.py
+program: train_Lurz_Control_Model.py
 method: bayes
 metric:
   goal: minimize

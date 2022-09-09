@@ -1,5 +1,5 @@
 from model_trainer import run_wandb_training
-from models import Lurz_Baseline
+from models import Lurz_Control_Model
 from model_trainer import Antolik_dataset_preparation_function
 
 
@@ -65,7 +65,7 @@ config = {
 
 def main():
 
-    model = run_wandb_training(config, Antolik_dataset_preparation_function, ENTITY, PROJECT, model_class=Lurz_Baseline)
+    model = run_wandb_training(config, Antolik_dataset_preparation_function, ENTITY, PROJECT, model_class=Lurz_Control_Model)
     return model
 
 

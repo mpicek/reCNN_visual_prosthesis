@@ -11,6 +11,7 @@ def get_fraction_oracles(
     test_label="Test correlations",
     fig_name="oracle_fig.png",
 ):
+    
     """
     Given oracles and test_correlations (both for each neuron), this method
     computes the fraction of oracle performance
