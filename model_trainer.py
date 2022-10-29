@@ -290,7 +290,7 @@ def run_wandb_training(
         model_artifact_name = model.__str__()
 
     # add best corr to metadata
-    metadata = config | {"best_model_score": best_observed_val_metric}
+    metadata = {**config, "best_model_score": best_observed_val_metric}
 
     # add model artifact
     best_model_artifact = wandb.Artifact(
@@ -302,6 +302,134 @@ def run_wandb_training(
     # say to wandb that the best val/corr of the model is the best one
     # and not the last one!! (it is the default behavour!!)
     run.summary[config["observed_val_metric"]] = best_observed_val_metric
+
+    print(checkpoint_callback.best_model_path)
+
+    model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
+
+    if config["test"]:
+        dm.model_performances(model, trainer)
+
+        # result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
+        #     metadata=results[0])
+        # run.log_artifact(result_artifact)
+
+    return model
+
+
+def run_training_without_logging(
+    config,
+    dataset_preparation_function,
+    entity,
+    project,
+    model_artifact_name=None,
+    model_class=reCNN_FullFactorized,
+    early_stopping_monitor="val/corr",
+    early_stopping_mode="max",
+    model_checkpoint_monitor="val/corr",
+    model_checkpoint_mode="max",
+    # **config,
+):
+    """Sets up a dataset and a model and runs a model
+        training WITHOUT Wandb. Subsequently it evaluates the model
+        and prints the results.
+
+    Args:
+        config (dict): Configuration dictionary
+        dataset_preparation_function (function): A function that sets up the dataset
+        entity (str): Name of the wandb user.
+        project (str): Name of the wandb project
+        model_artifact_name (str, optional): Name of the wandb artifact for the model. Defaults to None.
+        model_class (class, optional): A class of the model. Defaults to reCNN_FullFactorized.
+        early_stopping_monitor (str, optional): A measure which is watched and based on which the early stopping of the training occurs. Defaults to "val/corr".
+        early_stopping_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about the early stopping. Defaults to "max".
+        model_checkpoint_monitor (str, optional): A measure which is watched and based on which the best model is decided. Defaults to "val/corr".
+        model_checkpoint_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about best model. Defaults to "max".
+
+    Returns:
+        _type_: _description_
+    """
+
+    pl.seed_everything(config["seed"], workers=True)
+
+    # # init wandb run
+    # run = wandb.init(
+    #     config=config,
+    #     project=project,
+    #     entity=entity,
+    # )
+
+    # Access all hyperparameter values through wandb.config
+    # config = dict(wandb.config)
+    pprint(config)
+
+    dm = dataset_preparation_function(config, None)
+
+    # Set up model
+    model = model_class(**config)
+
+    # summary(model, torch.zeros((config["batch_size"], dm.get_input_shape()[0], dm.get_input_shape()[1], dm.get_input_shape()[2])))
+
+    # setup wandb logger
+    # wandb_logger = WandbLogger(log_model=True)
+    # wandb_logger.watch(model, log="all", log_freq=250)
+
+    # define callbacks for the training
+    early_stop = EarlyStopping(
+        monitor=early_stopping_monitor,
+        patience=config["patience"],
+        mode=early_stopping_mode,
+    )
+    checkpoint_callback = ModelCheckpoint(
+        save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
+    )
+
+    class LitProgressBar(ProgressBar):
+        def get_metrics(self, trainer, model):
+            # don't show the version number
+            items = super().get_metrics(trainer, model)
+            items.pop("v_num", None)
+            return items
+
+    bar = LitProgressBar()
+
+    # define the trainer
+    trainer = pl.Trainer(
+        callbacks=[early_stop, checkpoint_callback, bar],
+        max_epochs=config["max_epochs"],
+        gpus=[0],
+        # logger=wandb_logger,
+        log_every_n_steps=1,
+        # deterministic=True,
+        enable_checkpointing=True,
+    )
+
+    if config["train_on_val"]:
+        trainer.fit(
+            model,
+            train_dataloaders=dm.val_dataloader(),
+            val_dataloaders=dm.val_dataloader(),
+        )
+
+    else:
+        trainer.fit(
+            model,
+            train_dataloaders=dm.train_dataloader(),
+            val_dataloaders=dm.val_dataloader(),
+        )
+
+    best_observed_val_metric = (
+        checkpoint_callback.best_model_score.cpu().detach().numpy()
+    )
+    print(
+        "Best model's "
+        + config["observed_val_metric"]
+        + ": "
+        + str(best_observed_val_metric)
+    )
+
+    # add best corr to metadata
+    metadata = {**config, "best_model_score": best_observed_val_metric}
 
     print(checkpoint_callback.best_model_path)
 
