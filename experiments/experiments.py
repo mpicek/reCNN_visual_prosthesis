@@ -5,7 +5,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.resolve()))
 import wandb
 import glob
 import pytorch_lightning as pl
-from src.models import reCNN_bottleneck_CyclicGauss3d
+from models import reCNN_bottleneck_CyclicGauss3d
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
