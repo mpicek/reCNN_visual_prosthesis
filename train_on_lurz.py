@@ -60,6 +60,21 @@ config = {
     "init_sigma_range": 0.4,
 }
 
+config.update(
+    {
+        "ground_truth_positions_file_path": "data/antolik/position_dictionary.pickle",
+        "ground_truth_orientations_file_path": "data/antolik/oris.pickle",
+        "init_to_ground_truth_positions": True,
+        "init_to_ground_truth_orientations": True,
+        "freeze_positions": False,
+        "freeze_orientations": False,
+        "orientation_shift": 87.42857142857143,
+        "factor": 5.5,
+        "filtered_neurons":None,
+    }
+)
+
+
 
 def main():
 

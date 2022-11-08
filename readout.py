@@ -3,6 +3,7 @@ import torch
 from torch.nn import Parameter
 from torch.nn import functional as F
 import warnings
+from experiments.utils import pickle_read
 
 
 class Gaussian3dCyclic(readouts.Readout):
@@ -282,11 +283,32 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
     def __init__(
         self,
         *args,
+        ground_truth_positions_file_path="data/antolik/position_dictionary.pickle",
+        ground_truth_orientations_file_path="data/antolik/oris.pickle",
+        init_to_ground_truth_positions=False,
+        init_to_ground_truth_orientations=False,
+        freeze_positions=False,
+        freeze_orientations=False,
+        orientation_shift=87.42857142857143, #in degrees
+        factor = 5.5,
+        filtered_neurons=None,
         **kwargs,
     ):
         """The constructor
         """
+        self.ground_truth_positions_file_path = ground_truth_positions_file_path
+        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
+        self.init_to_ground_truth_positions = init_to_ground_truth_positions
+        self.init_to_ground_truth_orientations = init_to_ground_truth_orientations
+        self.freeze_positions = freeze_positions
+        self.freeze_orientations = freeze_orientations
+        self.orientation_shift = orientation_shift
+        self.factor = factor
+        self.filtered_neurons = filtered_neurons
+
         super().__init__(*args, **kwargs)
+
+        
 
     def initialize(self, mean_activity=None):
         """Initializes the readout.
@@ -296,7 +318,35 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
         """
         if mean_activity is None:
             mean_activity = self.mean_activity
+
+        # firstly init the data, then can be reinitialized (bellow)
         self.mu.data.uniform_(-self.init_mu_range, self.init_mu_range)
+
+        if self.init_to_ground_truth_positions:
+            pos_dict = pickle_read(self.ground_truth_positions_file_path)
+            target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
+            target_positions = torch.from_numpy(target_positions)
+
+            if self.filtered_neurons is not None:
+                target_positions = target_positions[self.filtered_neurons, :]
+
+            self.mu.data[0,0,:,0,0] = target_positions[:,0] / self.factor
+            self.mu.data[0,0,:,0,1] = (-target_positions[:,1]) / self.factor
+
+
+        if self.init_to_ground_truth_orientations:
+            o_dict = pickle_read(self.ground_truth_orientations_file_path)
+            target_ori = np.concatenate([np.array(o_dict['V1_Exc_L2/3']), np.array(o_dict['V1_Inh_L2/3'])])
+            target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
+            shifted_ori = (target_ori - self.orientation_shift) % 180
+            normalized_ori = shifted_ori / 180
+            normalized_ori = torch.from_numpy(normalized_ori)
+
+            if self.filtered_neurons is not None:
+                normalized_ori = normalized_ori[self.filtered_neurons]
+
+            self.mu.data[0,0,:,0,2] = (normalized_ori) # = normalized_ori
+
         if self.fixed_sigma:
             self.sigma.data.uniform_(self.init_sigma_range, self.init_sigma_range)
         else:
@@ -305,6 +355,16 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
                 "sigma is sampled from uniform distribuiton, instead of a fixed value. Consider setting "
                 "fixed_sigma to True"
             )
+        
+        # TODO
+        # # if we are supposed to freeze positions from the beginning, we set the
+        # # corresponding part of the sigmas to zero (=> no update)
+        # if self.freeze_positions:
+        #     self.sigma.data[0,0,:,0,:2] = torch.zeros(self.sigma.data[...,:2].shape)
+        
+        # if self.freeze_orientations:
+        #     self.sigma.data[0,0,:,0,2] = torch.zeros(self.sigma.data[...,2].shape)
+
         if self.bias is not None:
             self.initialize_bias(mean_activity=mean_activity)
 

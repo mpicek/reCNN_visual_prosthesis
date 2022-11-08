@@ -772,6 +772,15 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
             init_sigma_range=self.config["init_sigma_range"],
             init_mu_range=self.config["init_mu_range"],
             fixed_sigma=self.config["fixed_sigma"],
+            ground_truth_positions_file_path=config["ground_truth_positions_file_path"],
+            ground_truth_orientations_file_path=config["ground_truth_orientations_file_path"],
+            init_to_ground_truth_positions=config["init_to_ground_truth_positions"],
+            init_to_ground_truth_orientations=config["init_to_ground_truth_orientations"],
+            freeze_positions=config["freeze_positions"],
+            freeze_orientations=config["freeze_orientations"],
+            orientation_shift=config["orientation_shift"], #in degrees
+            factor = config["factor"],
+            filtered_neurons = config["filtered_neurons"],
         )
 
         self.register_buffer("laplace", torch.from_numpy(laplace()))

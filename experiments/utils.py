@@ -4,7 +4,6 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.resolve())) #.. this
 import wandb
 import glob
 import pytorch_lightning as pl
-from models import reCNN_bottleneck_CyclicGauss3d
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -119,7 +118,7 @@ def visualize_preferred_orientations(x, y, ori, f, ax, save, figsize=10, xlim=No
     plt.show()
     plt.clf()
 
-def download_model(artifact_name):
+def download_model(artifact_name, model_class):
     run = wandb.init(project="reCNN_visual_prosthesis", entity="csng-cuni")
     pl.seed_everything(42)
 
@@ -130,7 +129,7 @@ def download_model(artifact_name):
     artifact_dir = artifact.download()
     models_paths_list = glob.glob(artifact_dir + "/*.ckpt")
 
-    m = reCNN_bottleneck_CyclicGauss3d.load_from_checkpoint(models_paths_list[0])
+    m = model_class.load_from_checkpoint(models_paths_list[0])
     m.freeze()
     print(f"Model from {models_paths_list[0]} loaded!")
 

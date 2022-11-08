@@ -9,25 +9,62 @@ from typing import Optional
 import pathlib
 from torch.utils.data import Dataset
 from torchvision import transforms
+import matplotlib.pyplot as plt
+import math
 
 
 class AntolikDataset(Dataset):
     """A class for handling with the Antolik's synthetic dataset."""    
 
-    def __init__(self, path, normalize=True):
+    def __init__(self, path, normalize=True, brain_crop=None, stimulus_crop=None, ground_truth_path="data/antolik/position_dictionary.pickle"):
         """The constructor.
 
         Args:
             path (str): Path to the dataset
             normalize (bool, optional): Whether to normalize the images. Defaults to True.
+            brain_crop (float, optional): How much of the neurons to take into account (center crop a given area of the brain)
+                - None if using all the neurons, 
+                - (kept neurons in vis angle in range [0, 2]) if some neurons are cropped out (out of 2)
+                - determined by AntolikDataModule
+            stimulus_crop (tuple, optional): Whether to center crop the image.
+                - None if no crop applied (default), otherwise (kept height pixels, kept width pixels) if cropped.
+                - determined by AntolikDataModule
+            ground_truth_path (str, optional): Path to the file with the ground truth of positions of neurons.
         """
         self.normalize = normalize
+        self.brain_crop = brain_crop
+        self.stimulus_crop = stimulus_crop
+        self.ground_truth_path = ground_truth_path
+        self.filtered = None
+        
+        if self.stimulus_crop:
+            self.set_stimulus_crop(self.stimulus_crop)
+            
 
         self.data = self.pickle_read(path)
 
         self.transform_list = transforms.Compose(
             [transforms.Normalize((45.2315,), (26.6845,))]
         )
+
+        if self.brain_crop:
+            self.set_brain_crop(self.brain_crop)
+
+
+    def set_stimulus_crop(self, stimulus_crop):
+        self.stimulus_crop = stimulus_crop
+        self.crop_transform = transforms.CenterCrop(self.stimulus_crop)
+    
+    def set_brain_crop(self, brain_crop):
+        self.brain_crop = brain_crop
+        pos_dict = self.pickle_read(self.ground_truth_path)
+        target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
+        self.filtered = np.where((np.abs(target_positions[:, 0]) <= self.brain_crop) & (np.abs(target_positions[:, 1]) <= self.brain_crop))[0]
+    
+    def get_filtered_neurons(self):
+        """Returns filtered neurons if brain crop applied, otherwise returns None
+        """
+        return self.filtered
 
     def __getitem__(self, index):
         """Gets the index-th pair of visual stimulus and response to the stimulus.
@@ -44,13 +81,24 @@ class AntolikDataset(Dataset):
             [self.data[index]["V1_Exc_L2/3"], self.data[index]["V1_Inh_L2/3"]]
         )
 
+        if self.brain_crop:
+            y = y[self.filtered]
+
         data = torch.from_numpy(x)
         target = torch.from_numpy(y)
 
         if self.normalize:
             data = self.transform_list(data)
+        
+        if self.stimulus_crop:
+            data = self.crop_transform(data)
 
         return (data.float(), target.float())
+
+    
+    def visualize(self, index):
+        stimulus, _ = self.__getitem__(index)
+        plt.imshow(stimulus.numpy()[0], cmap='gray')
 
     def __len__(self):
         """
@@ -72,6 +120,16 @@ class AntolikDataset(Dataset):
         with open(path, "rb") as f:
             x = pickle.load(f)
         return x
+    
+    def get_indices(self):
+        """
+        Indices of the dataset are not trivial (not integers from 0 to n).
+        Each index is a complex string characterising the stimulus-response pair.
+
+        This method returns a list of indices so that we can get a stimulus-response
+        pair by typing dataset[indices[i]].
+        """
+        return [list(self.data.keys())[i] for i in range(self.__len__())]
 
 
 class AntolikDataModule(pl.LightningDataModule):
@@ -89,6 +147,11 @@ class AntolikDataModule(pl.LightningDataModule):
         normalize=True,
         num_workers=0,
         val_size=5000,
+        brain_crop=None,
+        stimulus_crop=None,
+        ground_truth_path="data/antolik/position_dictionary.pickle",
+        original_stimulus_visual_angle=11,
+        original_stimulus_resolution=110
     ):
         """The constructor.
 
@@ -99,6 +162,19 @@ class AntolikDataModule(pl.LightningDataModule):
             normalize (bool, optional): Whether to normalize the input images. Defaults to True.
             num_workers (int, optional): Number of workers that load the dataset. Defaults to 0.
             val_size (int, optional): Validation dataset length. Defaults to 5000.
+            brain_crop (float, optional): How much of the neurons to take into account (center crop a given area of the brain)
+                - None if using all the neurons, 
+                - (kept width neurons in vis angle from interval [0, 2]) if some neurons are cropped out out of 2
+            stimulus_crop (tuple, optional): How much to center crop the image.
+                - None if no crop applied (default), 
+                - "auto" to compute automatically (only if brain_crop defined)
+                - otherwise (kept height pixels, kept width pixels) if cropped.
+            ground_truth_path (str, optional): path to the .pickle file with dictionary of
+                positions of neurons (ground truth from the model)
+            original_stimulus_visual_angle (float, optional): How much of visual angle the original uncropped stimulus spans.
+                - Default: 11 deg of vis angle, that means 5.5 deg of vis angle to each side, that is 5.5 to the right, 5.5 to the left, up and down
+                - this argument might be somewhere in code named x_lim and y_lim (and it is, therefore, for a square image)
+            original_stimulus_resolution (int, optional): original resolution of the stimulus (uncropped).. one side, it is a square
         """
         super().__init__()
         self.train_data_dir = train_data_dir
@@ -108,6 +184,45 @@ class AntolikDataModule(pl.LightningDataModule):
         self.normalize = normalize
         self.num_workers = num_workers
         self.val_size = val_size
+        self.brain_crop = brain_crop
+
+        self.factor = 5.5 # predefined constant 
+        self.stimulus_crop = stimulus_crop
+
+
+        self.original_stimulus_resolution = original_stimulus_resolution
+        self.original_stimulus_visual_angle = original_stimulus_visual_angle
+        # it is uncropped, so by default, the stimulus_visual_angle is the same as initialized
+        # (but will be adjusted in set_stimulus_crop)
+        self.stimulus_visual_angle = original_stimulus_visual_angle
+
+
+        # automatically compute the crop of the stimulus image
+        if self.brain_crop and self.stimulus_crop == "auto":
+            keep_visual_field = self.brain_crop # this is how much of visual field (out of 2) is kept (from the middle). The rest is cropped out
+
+            # neurons are from -2 to +2, when normalized to [-1, 1] (where, stimulus is presented to the whole area of [-1, 1]),
+            # we want to know how much of the space the neurons allocate. All the following computations are only in one quadrant
+            normalized_area_of_neurons = 2/self.factor # ~0.36.. out of 1
+            # given a crop of neurons (keep_visual_field), we want to know, how many pixels from the stimulus we can crop
+
+            cropped_neurons = 2-keep_visual_field
+            ratio_of_cropped_neurons = cropped_neurons / 2
+
+            normalized_area_of_cropped_neurons = normalized_area_of_neurons * ratio_of_cropped_neurons
+
+            discard_pixels_each_side = math.floor((self.original_stimulus_resolution/2) * normalized_area_of_cropped_neurons)
+
+            print(str(discard_pixels_each_side) + "px will be discarded from each side.")
+            self.stimulus_crop = (self.original_stimulus_resolution - 2*discard_pixels_each_side, self.original_stimulus_resolution - 2*discard_pixels_each_side)
+
+            self.stimulus_visual_angle = (self.original_stimulus_visual_angle / self.original_stimulus_resolution) * self.stimulus_crop[0] # it is a square
+        
+        elif self.stimulus_crop is not None:
+            self.stimulus_visual_angle = (self.original_stimulus_visual_angle / self.original_stimulus_resolution) * self.stimulus_crop[0] # it is a square
+
+        self.ground_truth_path = ground_truth_path
+
 
     def prepare_data(self):
         """We do not have public access to the data. This function will be implemented
@@ -147,22 +262,21 @@ class AntolikDataModule(pl.LightningDataModule):
         # when stage=None -> both "fit" and "test"
 
         self.train_dataset = AntolikDataset(
-            self.train_data_dir, normalize=self.normalize
+            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_path
         )
-        self.train_data = self.pickle_read(self.train_data_dir)
-        self.test_dataset = AntolikDataset(self.test_data_dir, normalize=self.normalize)
-        self.test_data = self.pickle_read(self.test_data_dir)
+
+        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_path)
 
         print("Data loaded successfully!")
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None:
 
-            indices = np.arange(0, len(self.train_data))
+            indices = np.arange(0, len(self.train_dataset))
 
             rng = np.random.default_rng(69)
             rng.shuffle(indices)
-            indices_keys = [list(self.train_data.keys())[i] for i in indices]
+            indices_keys = [list(self.train_dataset.data.keys())[i] for i in indices]
 
             subset_idx_val = indices_keys[0 : self.val_size]
             subset_idx_train = indices_keys[self.val_size :]
@@ -174,9 +288,19 @@ class AntolikDataModule(pl.LightningDataModule):
             self.val_sampler = SubsetSequentialSampler(subset_idx_val)
 
         if stage == "test" or stage is None:
-            indices = np.arange(0, len(self.test_data))
-            subset_idx_test = [list(self.test_data.keys())[i] for i in indices]
+            indices = np.arange(0, len(self.test_dataset))
+            subset_idx_test = [list(self.test_dataset.data.keys())[i] for i in indices]
             self.test_sampler = SubsetSequentialSampler(subset_idx_test)
+
+    def get_stimulus_visual_angle(self):
+        """Returns how much the stimulus spans.
+
+        Returns:
+            float: How much the stimulus spans. If the stimulus_crop is defined, then returns
+                how much this cropped stimulus spans. The whole span is returned, not to one and other side.
+                Returns float as the stimulus is a square.
+        """
+        return self.stimulus_visual_angle
 
     def get_input_shape(self):
         x, _ = next(iter(self.train_dataloader()))
@@ -185,6 +309,9 @@ class AntolikDataModule(pl.LightningDataModule):
     def get_output_shape(self):
         _, y = next(iter(self.train_dataloader()))
         return y[0].shape
+    
+    def get_filtered_neurons(self):
+        return self.train_dataset.get_filtered_neurons()
 
     def get_mean(self):
         """Computes the mean response of the train dataset. If it is available

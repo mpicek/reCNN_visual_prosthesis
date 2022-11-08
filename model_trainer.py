@@ -107,6 +107,9 @@ def Antolik_dataset_preparation_function_test(config, run=None):
         "batch_size": config["batch_size"],
         "normalize": True,
         "val_size": 500,
+        "brain_crop": 0.8,
+        "stimulus_crop": "auto",
+        "ground_truth_path": "data/antolik/position_dictionary.pickle",
     }
 
     if run is not None:
@@ -124,6 +127,7 @@ def Antolik_dataset_preparation_function_test(config, run=None):
             "input_size_y": dm.get_input_shape()[2],
             "num_neurons": dm.get_output_shape()[0],
             "mean_activity": dm.get_mean(),
+            "filtered_neurons":dm.get_filtered_neurons(),
         }
     )
 
@@ -152,6 +156,9 @@ def Antolik_dataset_preparation_function(config, run=None):
         "batch_size": config["batch_size"],
         "normalize": True,
         "val_size": 5000,
+        "brain_crop": 0.8,
+        "stimulus_crop": "auto",
+        "ground_truth_path": "data/antolik/position_dictionary.pickle",
     }
 
     if run is not None:
@@ -169,6 +176,7 @@ def Antolik_dataset_preparation_function(config, run=None):
             "input_size_y": dm.get_input_shape()[2],
             "num_neurons": dm.get_output_shape()[0],
             "mean_activity": dm.get_mean(),
+            "filtered_neurons":dm.get_filtered_neurons(),
         }
     )
 

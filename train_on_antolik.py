@@ -1,5 +1,5 @@
 from model_trainer import run_wandb_training
-from models import reCNN_bottleneck_CyclicGauss3d
+from models import reCNN_bottleneck_CyclicGauss3d_no_scaling
 from model_trainer import Antolik_dataset_preparation_function
 
 
@@ -27,7 +27,7 @@ config = {
     "stack": -1,
     "depth_separable": True,
     # READOUT CONFIG
-    "readout_bias": True,
+    "readout_bias": False,
     "nonlinearity": "softplus",
     # REGULARIZATION
     "core_gamma_input": 0.00307424496692959,
@@ -39,7 +39,7 @@ config = {
     "reg_group_sparsity": 0.1,
     "reg_spatial_sparsity": 0.45,
     # TRAINER
-    "patience": 5,
+    "patience": 7,
     "train_on_val": False,  # in case you want to quickly check that your model "compiles" correctly
     "test": True,
     "observed_val_metric": "val/corr",
@@ -58,6 +58,21 @@ config = {
     "init_sigma_range": 0.8,
 }
 
+config.update(
+    {
+        "ground_truth_positions_file_path": "data/antolik/position_dictionary.pickle",
+        "ground_truth_orientations_file_path": "data/antolik/oris.pickle",
+        "init_to_ground_truth_positions": True,
+        "init_to_ground_truth_orientations": True,
+        "freeze_positions": False,
+        "freeze_orientations": False,
+        "orientation_shift": 87.42857142857143,
+        "factor": 5.5,
+        "filtered_neurons":None,
+    }
+)
+
+
 
 def main():
 
@@ -66,7 +81,7 @@ def main():
         Antolik_dataset_preparation_function,
         ENTITY,
         PROJECT,
-        model_class=reCNN_bottleneck_CyclicGauss3d,
+        model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling,
     )
     return model
 
