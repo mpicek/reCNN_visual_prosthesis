@@ -85,7 +85,7 @@ def Lurz_dataset_preparation_function(config, run=None):
     return dm
 
 
-def Antolik_dataset_preparation_function_test(config, run=None):
+def Antolik_dataset_preparation_function_test(config, run=None, return_ground_truth=False):
     """Gets config, can edit it.
         Uses only Antolik's in-silico test dataset (for both train and test), therefore
             the loading is much quicker.
@@ -194,6 +194,7 @@ def run_wandb_training(
     early_stopping_mode="max",
     model_checkpoint_monitor="val/corr",
     model_checkpoint_mode="max",
+    needs_ground_truth=False,
     # **config,
 ):
     """Sets up a dataset and a model, sets up wandb session and runs a model
@@ -231,8 +232,16 @@ def run_wandb_training(
 
     dm = dataset_preparation_function(config, None)
 
+    model = None
     # Set up model
-    model = model_class(**config)
+    if needs_ground_truth:
+        pos_x, pos_y, orientations = dm.get_ground_truth(config["ground_truth_positions_file_path"], config["ground_truth_orientations_file_path"])
+        resolution = (dm.get_input_shape()[1], dm.get_input_shape()[2])
+        xlim = [-dm.get_stimulus_visual_angle()/2, dm.get_stimulus_visual_angle()/2]
+        ylim = [-dm.get_stimulus_visual_angle()/2, dm.get_stimulus_visual_angle()/2]
+        model = model_class(pos_x, pos_y, orientations, resolution, xlim, ylim, **config)
+    else:
+        model = model_class(**config)
 
     # summary(model, torch.zeros((config["batch_size"], dm.get_input_shape()[0], dm.get_input_shape()[1], dm.get_input_shape()[2])))
 
