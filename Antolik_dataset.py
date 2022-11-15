@@ -11,6 +11,8 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import math
+from experiments.utils import pickle_read
+
 
 
 class AntolikDataset(Dataset):
@@ -130,6 +132,46 @@ class AntolikDataset(Dataset):
         pair by typing dataset[indices[i]].
         """
         return [list(self.data.keys())[i] for i in range(self.__len__())]
+    
+    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
+        """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
+           (in radians) of the Antolik's model's ground truth.
+        
+
+        Args:
+            ground_truth_positions_file_path (str): Path to the file with positions of neurons
+            ground_truth_orientations_file_path (str): Path to the file with preferred orientations of neurons
+
+        Returns:
+            tuple: numpy arrays pos_x, pos_y, target_ori (in radians!)
+        """
+        filtered_neurons = self.get_filtered_neurons()
+
+        pos_dict = pickle_read(ground_truth_positions_file_path)
+        target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
+        target_positions = target_positions
+
+        if filtered_neurons is not None:
+            target_positions = target_positions[filtered_neurons, :]
+
+        pos_x = target_positions[:,0]
+        pos_y = (-target_positions[:,1])
+
+
+        o_dict = pickle_read(ground_truth_orientations_file_path)
+        target_ori = np.concatenate([np.array(o_dict['V1_Exc_L2/3']), np.array(o_dict['V1_Inh_L2/3'])])
+        # target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
+        # shifted_ori = (target_ori - orientation_shift) % 180
+        # normalized_ori = shifted_ori / 180
+        # normalized_ori = normalized_ori
+
+        # if filtered_neurons is not None:
+        #     normalized_ori = normalized_ori[filtered_neurons]
+
+        if filtered_neurons is not None:
+            target_ori = target_ori[self.get_filtered_neurons()]
+
+        return pos_x, pos_y, target_ori
 
 
 class AntolikDataModule(pl.LightningDataModule):
@@ -301,6 +343,20 @@ class AntolikDataModule(pl.LightningDataModule):
                 Returns float as the stimulus is a square.
         """
         return self.stimulus_visual_angle
+    
+    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
+        """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
+           (in radians) of the Antolik's model's ground truth.
+        
+
+        Args:
+            ground_truth_positions_file_path (str): Path to the file with positions of neurons
+            ground_truth_orientations_file_path (str): Path to the file with preferred orientations of neurons
+
+        Returns:
+            _type_: _description_
+        """
+        return self.train_dataset.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path)
 
     def get_input_shape(self):
         x, _ = next(iter(self.train_dataloader()))
