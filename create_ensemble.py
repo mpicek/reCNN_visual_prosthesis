@@ -12,6 +12,7 @@ import torch
 import pytorch_lightning as pl
 from models import reCNN_bottleneck_CyclicGauss3d, Lurz_Control_Model
 from pytorch_lightning.loggers import WandbLogger
+from energy_model.energy_model import EnergyModel
 
 
 
@@ -56,6 +57,30 @@ def download_model(model_name, run):
     print(model_checkpoint_path)
 
     m = reCNN_bottleneck_CyclicGauss3d.load_from_checkpoint(model_checkpoint_path)
+
+    print(f"Model from {model_checkpoint_path} loaded!")
+
+    return m
+
+def download_energy_model(model_name, run):
+    """Downloads a model from Weights & Biases and returns it.
+
+    Args:
+        model_name (str): The whole name of the model
+        run (wandb.run): Run of the wandb.
+
+    Returns:
+        pl.model: Pytorch model downloaded from wandb.
+    """    
+    artifact = run.use_artifact(model_name, type="model")
+    artifact_dir = artifact.download()
+
+    print(artifact_dir)
+
+    model_checkpoint_path = glob.glob(artifact_dir + "/*.ckpt")[0]
+    print(model_checkpoint_path)
+
+    m = EnergyModel.load_from_checkpoint(model_checkpoint_path)
 
     print(f"Model from {model_checkpoint_path} loaded!")
 
