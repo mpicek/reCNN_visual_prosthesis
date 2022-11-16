@@ -403,9 +403,12 @@ class EnergyModel(pl.LightningModule):
         plt.imshow(gabor, vmax=max, vmin=min, cmap=color_map)
 
 
-        if title == "":
+        if title == "" and neuron_id != "all":
             shifted_orientation = np.mod(self.orientations + self.default_ori_shift, np.pi)
             title = f"Neuron {neuron_id} \n with position [{self.positions_x[neuron_id]:.2f}, {self.positions_y[neuron_id]:.2f}] \n and pref. orientation {self.orientations[neuron_id]:.2f}rad, (with default shift:{shifted_orientation[neuron_id]:.2f}rad)"
+        elif title == "" and neuron_id == "all":
+            title = "Visual field of all neurons"
+
 
         plt.title(title)
         plt.colorbar()
