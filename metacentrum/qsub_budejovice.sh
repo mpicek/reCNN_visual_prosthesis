@@ -6,9 +6,9 @@
 
 # DEFINE RESOURCES:
 #PBS -N qsub_script
-#PBS -l select=1:ncpus=16:ngpus=1:mem=72gb:scratch_local=100gb:gpu_cap=^cuda80:cluster=^glados:cl_zubat=False
+#PBS -l select=1:ncpus=4:ngpus=1:mem=35gb:scratch_local=100gb:cluster=^glados:cl_zubat=False
 #PBS -q gpu
-#PBS -l walltime=24:00:00
+#PBS -l walltime=18:30:00
 
 # Directory I use as a main storage
 DATADIR="/storage/budejovice1/home/$(whoami)"
@@ -39,7 +39,7 @@ echo "cd /storage/budejovice1/home/mpicek/reCNN_visual_prosthesis" >> my_new_scr
 echo "$CMD" >> my_new_script.sh
 
 # --nv for gpu, bind scratch directory
-singularity exec --nv -B $SCRATCHDIR /storage/budejovice1/home/mpicek/csng-dl.img bash my_new_script.sh
+singularity exec --nv -B $SCRATCHDIR /storage/brno2/home/mpicek/image.img bash my_new_script.sh
 
 # print what command has been run and print the output of the program
 echo "$CMD"

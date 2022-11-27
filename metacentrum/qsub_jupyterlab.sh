@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N JupyterLabPyTorch_Job
 #PBS -q gpu
-#PBS -l select=1:ncpus=6:ngpus=1:mem=20gb:scratch_local=100gb:gpu_cap=^cuda80:cluster=^glados:cl_zubat=False
+#PBS -l select=1:ncpus=8:ngpus=1:mem=48gb:scratch_local=100gb:gpu_cap=^cuda80:cluster=^glados:cl_zubat=False
 #PBS -l walltime=12:00:00
 #PBS -m ae
 # The 4 lines above are options for scheduling system: job will run 4 hours at maximum, 1 machine with 2 processors + 4gb RAM memory + 10gb scratch memory  are requested, email notification will be sent when the job aborts (a) or ends (e) 
@@ -74,6 +74,8 @@ $PASS_MESSAGE
 
 You can reset password by deleting file $HOMEDIR/.jupyter/jupyter_notebook_config.json and run job again with this script.
 EOFmail
+
+echo "http://$HOSTNAME:$PORT" > "/storage/praha1/home/mpicek/$(date +"%Y_%m_%d_%I_%M_%p").log" 
 
 ls /cvmfs/singularity.metacentrum.cz/ > /dev/null #automount cvmfs
 
