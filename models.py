@@ -46,6 +46,7 @@ class ExtendedEncodingModel(encoding_model):
         self.jackknife_oracle = config["jackknife_oracle"]
         self.generate_oracle_figure = config["generate_oracle_figure"]
         self.loss = PoissonLoss(avg=True)
+        # self.loss = torch.nn.MSELoss()
         self.corr = Corr()
         self.save_hyperparameters()
 
@@ -732,7 +733,13 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
               is periodic
     """
 
-    def __init__(self, **config):
+    def __init__(self, dataloader=None, negative_y_coordinate=False, **config):
+        """As this network can be initialized to the ground truth positions and orientations,
+        we need a reference to the dataloader from which this ground truth will be provided.
+
+        Args:
+            dataloader (pl.LightningDataModule): Dataset dataloader with method get_ground_truth(pos_path, ori_path, in_degrees)
+        """
         super().__init__(**config)
         self.config = config
         self.nonlinearity = self.config["nonlinearity"]
@@ -781,19 +788,20 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
             orientation_shift=config["orientation_shift"], #in degrees
             factor = config["factor"],
             filtered_neurons = config["filtered_neurons"],
+            dataloader = dataloader,
+            negative_y_coordinate = negative_y_coordinate,
         )
 
         self.register_buffer("laplace", torch.from_numpy(laplace()))
         self.nonlin = bl.act_func()[config["nonlinearity"]]
 
     def forward(self, x):
-        self.log("train/sigma1", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma1b", self.readout.sigma[0, 0, 1, 0, 1])
-        self.log("train/sigma2", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma2b", self.readout.sigma[0, 0, 1, 0, 1])
-        self.log("train/sigma3", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma3b", self.readout.sigma[0, 0, 1, 0, 1])
-        # print(self.readout.sigma.shape)
+        # self.log("train/sigma1", self.readout.sigma[0, 0, 0, 0, 1])
+        # self.log("train/sigma1b", self.readout.sigma[0, 0, 1, 0, 1])
+        # self.log("train/sigma2", self.readout.sigma[0, 0, 0, 0, 1])
+        # self.log("train/sigma2b", self.readout.sigma[0, 0, 1, 0, 1])
+        # self.log("train/sigma3", self.readout.sigma[0, 0, 0, 0, 1])
+        # self.log("train/sigma3b", self.readout.sigma[0, 0, 1, 0, 1])
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x

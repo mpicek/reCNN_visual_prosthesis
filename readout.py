@@ -292,6 +292,8 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
         orientation_shift=87.42857142857143, #in degrees
         factor = 5.5,
         filtered_neurons=None,
+        dataloader=None,
+        negative_y_coordinate=False,
         **kwargs,
     ):
         """The constructor
@@ -305,9 +307,10 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
         self.orientation_shift = orientation_shift
         self.factor = factor
         self.filtered_neurons = filtered_neurons
+        self.dataloader = dataloader
+        self.negative_y_coordinate = negative_y_coordinate
 
         super().__init__(*args, **kwargs)
-
         
 
     def initialize(self, mean_activity=None):
@@ -322,28 +325,26 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
         # firstly init the data, then can be reinitialized (bellow)
         self.mu.data.uniform_(-self.init_mu_range, self.init_mu_range)
 
+        if self.dataloader:
+            pos_x, pos_y, target_ori = self.dataloader.get_ground_truth(self.ground_truth_positions_file_path, self.ground_truth_orientations_file_path, in_degrees=True)
+
         if self.init_to_ground_truth_positions:
-            pos_dict = pickle_read(self.ground_truth_positions_file_path)
-            target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
-            target_positions = torch.from_numpy(target_positions)
-
-            if self.filtered_neurons is not None:
-                target_positions = target_positions[self.filtered_neurons, :]
-
-            self.mu.data[0,0,:,0,0] = target_positions[:,0] / self.factor
-            self.mu.data[0,0,:,0,1] = (-target_positions[:,1]) / self.factor
+            pos_x = torch.from_numpy(pos_x)
+            pos_y = torch.from_numpy(pos_y)
+            # works also when the stimulus is cropped (self.get_stimulus_visual_angle()
+            # returns the visual angle corrected after the stimulus crop)
+            self.mu.data[0,0,:,0,0] = pos_x / self.dataloader.get_stimulus_visual_angle()
+            
+            if self.negative_y_coordinate:
+                self.mu.data[0,0,:,0,1] = (-pos_y) / self.factor
+            else:
+                self.mu.data[0,0,:,0,1] = pos_y / self.factor
 
 
         if self.init_to_ground_truth_orientations:
-            o_dict = pickle_read(self.ground_truth_orientations_file_path)
-            target_ori = np.concatenate([np.array(o_dict['V1_Exc_L2/3']), np.array(o_dict['V1_Inh_L2/3'])])
-            target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
-            shifted_ori = (target_ori - self.orientation_shift) % 180
-            normalized_ori = shifted_ori / 180
+            shifted_ori = (target_ori - self.orientation_shift) % 180 # TODO: minus or plus
+            normalized_ori = shifted_ori / 180 # from [0, 180] to [0, 1].. for the network
             normalized_ori = torch.from_numpy(normalized_ori)
-
-            if self.filtered_neurons is not None:
-                normalized_ori = normalized_ori[self.filtered_neurons]
 
             self.mu.data[0,0,:,0,2] = (normalized_ori) # = normalized_ori
 
@@ -389,7 +390,7 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
         c_in, w_in, h_in = self.in_shape
         if (c_in, w_in, h_in) != (c, w, h):
             raise ValueError(
-                "the specified feature map dimension is not the readout's expected input dimension"
+                f"the specified feature map dimension is not the readout's expected input dimension. Came in: {x.shape[1:]}, but we want {self.in_shape}"
             )
 
         # we copy the first channel to the end to make it periodic
