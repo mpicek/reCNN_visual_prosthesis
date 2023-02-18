@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import math
-from experiments.utils import pickle_read
+from experiments.utils import pickle_read, download_model, reconstruct_orientation_maps, visualize_preferred_orientations
 
 
 
@@ -46,7 +46,8 @@ class AntolikDataset(Dataset):
         self.data = self.pickle_read(path)
 
         self.transform_list = transforms.Compose(
-            [transforms.Normalize((45.2315,), (26.6845,))]
+            # [transforms.Normalize((45.2315,), (26.6845,))] # old dataset
+            [transforms.Normalize((46.25135729356395,), (26.337162920481937,))] # new dataset
         )
 
         if self.brain_crop:
@@ -133,7 +134,7 @@ class AntolikDataset(Dataset):
         """
         return [list(self.data.keys())[i] for i in range(self.__len__())]
     
-    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
+    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
         """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
            (in radians) of the Antolik's model's ground truth.
         
@@ -141,6 +142,8 @@ class AntolikDataset(Dataset):
         Args:
             ground_truth_positions_file_path (str): Path to the file with positions of neurons
             ground_truth_orientations_file_path (str): Path to the file with preferred orientations of neurons
+            in_degrees (Bool, optional): If we want to return the orientations in degrees. If
+                False, orientations in radians are returned. Defaults to False.
 
         Returns:
             tuple: numpy arrays pos_x, pos_y, target_ori (in radians!)
@@ -149,24 +152,31 @@ class AntolikDataset(Dataset):
 
         pos_dict = pickle_read(ground_truth_positions_file_path)
         target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
-        target_positions = target_positions
 
         if filtered_neurons is not None:
             target_positions = target_positions[filtered_neurons, :]
 
-        pos_x = target_positions[:,0]
-        pos_y = (-target_positions[:,1])
+        pos_x = None
+        if minus_x:
+            pos_x = (-target_positions[:,0])
+        else:
+            pos_x = (target_positions[:,0])
+
+        pos_y = None
+        if minus_y:
+            pos_y = (-target_positions[:,1])
+        else:
+            pos_y = (target_positions[:,1])
+        
+        if swap_axes:
+            pos_x, pos_y = pos_y, pos_x
 
 
         o_dict = pickle_read(ground_truth_orientations_file_path)
         target_ori = np.concatenate([np.array(o_dict['V1_Exc_L2/3']), np.array(o_dict['V1_Inh_L2/3'])])
-        # target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
-        # shifted_ori = (target_ori - orientation_shift) % 180
-        # normalized_ori = shifted_ori / 180
-        # normalized_ori = normalized_ori
-
-        # if filtered_neurons is not None:
-        #     normalized_ori = normalized_ori[filtered_neurons]
+        
+        if in_degrees:
+            target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
 
         if filtered_neurons is not None:
             target_ori = target_ori[self.get_filtered_neurons()]
@@ -282,12 +292,12 @@ class AntolikDataModule(pl.LightningDataModule):
 
         if not train_path.exists():
             raise Exception(
-                "The .pickle file with Antolik train dataset does not exist."
+                f"File {str(train_path)} with Antolik train dataset does not exist."
             )
 
         if not test_path.exists():
             raise Exception(
-                "The .pickle file with Antolik test dataset does not exist."
+                f"File {str(train_path)} with Antolik test dataset does not exist."
             )
 
     def setup(self, stage: Optional[str] = None):
@@ -344,7 +354,7 @@ class AntolikDataModule(pl.LightningDataModule):
         """
         return self.stimulus_visual_angle
     
-    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
+    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
         """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
            (in radians) of the Antolik's model's ground truth.
         
@@ -352,11 +362,19 @@ class AntolikDataModule(pl.LightningDataModule):
         Args:
             ground_truth_positions_file_path (str): Path to the file with positions of neurons
             ground_truth_orientations_file_path (str): Path to the file with preferred orientations of neurons
+            in_degrees (Bool, optional): If we want to return the orientations in degrees. If
+                False, orientations in radians are returned. Defaults to False.
 
         Returns:
-            _type_: _description_
+            tuple: numpy arrays pos_x, pos_y, target_ori (in radians!)
         """
-        return self.train_dataset.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path)
+        return self.train_dataset.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, minus_y, minus_x, swap_axes)
+    
+    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False):
+        
+        fig, ax = plt.subplots()
+        x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, minus_y, minus_x, swap_axes)
+        reconstruct_orientation_maps(x, y, o, fig, ax, save, 12, 2.4, 2.4, img_path, suffix, neuron_dot_size)
 
     def get_input_shape(self):
         x, _ = next(iter(self.train_dataloader()))
@@ -391,6 +409,7 @@ class AntolikDataModule(pl.LightningDataModule):
             self.train_dataset,
             sampler=self.train_sequential_sampler,
             batch_size=self.batch_size,
+            drop_last=True,
         )
         summed = torch.zeros(self.get_output_shape())
 
@@ -429,6 +448,7 @@ class AntolikDataModule(pl.LightningDataModule):
             self.train_dataset,
             sampler=self.train_random_sampler,
             batch_size=self.batch_size,
+            drop_last=True,
         )
         print(f"    Input shape (images): {self.get_input_shape()}")
         print("    With batch size also: ", end="")
@@ -456,6 +476,7 @@ class AntolikDataModule(pl.LightningDataModule):
             sampler=self.train_random_sampler,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            drop_last=True,
         )
 
     def val_dataloader(self):
@@ -471,6 +492,7 @@ class AntolikDataModule(pl.LightningDataModule):
             sampler=self.val_sampler,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            drop_last=True,
         )
 
     def test_dataloader(self):
@@ -483,6 +505,7 @@ class AntolikDataModule(pl.LightningDataModule):
             sampler=self.test_sampler,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            drop_last=True,
         )
 
     def get_oracle_dataloader(self):
@@ -497,6 +520,7 @@ class AntolikDataModule(pl.LightningDataModule):
             sampler=self.test_sampler,
             batch_size=10,
             num_workers=self.num_workers,
+            drop_last=True,
         )
 
     def model_performances(self, model=None, trainer=None, control_measures=None):
