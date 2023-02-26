@@ -18,7 +18,7 @@ from experiments.utils import pickle_read, download_model, reconstruct_orientati
 class AntolikDataset(Dataset):
     """A class for handling with the Antolik's synthetic dataset."""    
 
-    def __init__(self, path, normalize=True, brain_crop=None, stimulus_crop=None, ground_truth_path="data/antolik/position_dictionary.pickle"):
+    def __init__(self, path, normalize=True, brain_crop=None, stimulus_crop=None, ground_truth_positions_file_path=None, ground_truth_orientations_file_path=None):
         """The constructor.
 
         Args:
@@ -31,12 +31,13 @@ class AntolikDataset(Dataset):
             stimulus_crop (tuple, optional): Whether to center crop the image.
                 - None if no crop applied (default), otherwise (kept height pixels, kept width pixels) if cropped.
                 - determined by AntolikDataModule
-            ground_truth_path (str, optional): Path to the file with the ground truth of positions of neurons.
+            ground_truth_positions_file_path (str, optional): Path to the file with the ground truth of positions of neurons.
         """
         self.normalize = normalize
         self.brain_crop = brain_crop
         self.stimulus_crop = stimulus_crop
-        self.ground_truth_path = ground_truth_path
+        self.ground_truth_positions_file_path = ground_truth_positions_file_path
+        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
         self.filtered = None
         
         if self.stimulus_crop:
@@ -52,7 +53,10 @@ class AntolikDataset(Dataset):
 
         if self.brain_crop:
             self.set_brain_crop(self.brain_crop)
-
+    
+    def set_ground_truth_files(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
+        self.ground_truth_positions_file_path = ground_truth_positions_file_path
+        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
 
     def set_stimulus_crop(self, stimulus_crop):
         self.stimulus_crop = stimulus_crop
@@ -60,7 +64,7 @@ class AntolikDataset(Dataset):
     
     def set_brain_crop(self, brain_crop):
         self.brain_crop = brain_crop
-        pos_dict = self.pickle_read(self.ground_truth_path)
+        pos_dict = self.pickle_read(self.ground_truth_positions_file_path)
         target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
         self.filtered = np.where((np.abs(target_positions[:, 0]) <= self.brain_crop) & (np.abs(target_positions[:, 1]) <= self.brain_crop))[0]
     
@@ -134,14 +138,16 @@ class AntolikDataset(Dataset):
         """
         return [list(self.data.keys())[i] for i in range(self.__len__())]
     
-    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
+    def get_ground_truth(self, ground_truth_positions_file_path=None, ground_truth_orientations_file_path=None, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
         """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
            (in radians) of the Antolik's model's ground truth.
         
 
         Args:
-            ground_truth_positions_file_path (str): Path to the file with positions of neurons
-            ground_truth_orientations_file_path (str): Path to the file with preferred orientations of neurons
+            ground_truth_positions_file_path (str, None): Path to the file with positions of neurons. If none,
+                self.ground_truth_positions_file_path is used. Defaults to None.
+            ground_truth_orientations_file_path (str, None): Path to the file with preferred orientations of neurons. If none,
+                self.ground_truth_orientations_file_path is used. Defaults to None.
             in_degrees (Bool, optional): If we want to return the orientations in degrees. If
                 False, orientations in radians are returned. Defaults to False.
 
@@ -149,6 +155,12 @@ class AntolikDataset(Dataset):
             tuple: numpy arrays pos_x, pos_y, target_ori (in radians!)
         """
         filtered_neurons = self.get_filtered_neurons()
+
+        if ground_truth_positions_file_path is None:
+            ground_truth_positions_file_path = self.ground_truth_positions_file_path
+        
+        if ground_truth_orientations_file_path is None:
+            ground_truth_orientations_file_path = self.ground_truth_orientations_file_path
 
         pos_dict = pickle_read(ground_truth_positions_file_path)
         target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
@@ -201,7 +213,7 @@ class AntolikDataModule(pl.LightningDataModule):
         val_size=5000,
         brain_crop=None,
         stimulus_crop=None,
-        ground_truth_path="data/antolik/position_dictionary.pickle",
+        ground_truth_positions_file_path=None,
         original_stimulus_visual_angle=11,
         original_stimulus_resolution=110
     ):
@@ -221,7 +233,7 @@ class AntolikDataModule(pl.LightningDataModule):
                 - None if no crop applied (default), 
                 - "auto" to compute automatically (only if brain_crop defined)
                 - otherwise (kept height pixels, kept width pixels) if cropped.
-            ground_truth_path (str, optional): path to the .pickle file with dictionary of
+            ground_truth_positions_file_path (str, optional): path to the .pickle file with dictionary of
                 positions of neurons (ground truth from the model)
             original_stimulus_visual_angle (float, optional): How much of visual angle the original uncropped stimulus spans.
                 - Default: 11 deg of vis angle, that means 5.5 deg of vis angle to each side, that is 5.5 to the right, 5.5 to the left, up and down
@@ -273,7 +285,7 @@ class AntolikDataModule(pl.LightningDataModule):
         elif self.stimulus_crop is not None:
             self.stimulus_visual_angle = (self.original_stimulus_visual_angle / self.original_stimulus_resolution) * self.stimulus_crop[0] # it is a square
 
-        self.ground_truth_path = ground_truth_path
+        self.ground_truth_positions_file_path = ground_truth_positions_file_path
 
 
     def prepare_data(self):
@@ -314,10 +326,10 @@ class AntolikDataModule(pl.LightningDataModule):
         # when stage=None -> both "fit" and "test"
 
         self.train_dataset = AntolikDataset(
-            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_path
+            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path
         )
 
-        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_path)
+        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path)
 
         print("Data loaded successfully!")
 
@@ -573,6 +585,19 @@ class AntolikDataModule(pl.LightningDataModule):
         with open(path, "rb") as f:
             x = pickle.load(f)
         return x
+
+    def get_indices(self, dataset_type="train"):
+        """Get indices for possible manual handling of the dataset
+
+        Args:
+            dataset_type (str, optional): Type of dataset: "train", "test". Defaults to "train".
+        """
+        if dataset_type == "train":
+            return self.train_dataset.get_indices()
+        elif dataset_type == "test":
+            return self.test_dataset.get_indices()
+        else:
+            raise Exception("wrong dataset_type provided in get_indices function")
 
 
 if __name__ == "__main__":
