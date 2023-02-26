@@ -1,7 +1,7 @@
 import wandb
 from model_trainer import (
     Lurz_dataset_preparation_function,
-    Antolik_dataset_preparation_function_test,
+    Antolik_dataset_preparation_function,
     run_wandb_training,
 )
 from models import ExtendedEncodingModel

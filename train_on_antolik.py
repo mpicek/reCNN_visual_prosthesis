@@ -1,6 +1,6 @@
 from model_trainer import run_wandb_training
 from models import reCNN_bottleneck_CyclicGauss3d_no_scaling, reCNN_bottleneck_CyclicGauss3d
-from model_trainer import Antolik_dataset_preparation_function_general, Antolik_dataset_preparation_function_test
+from model_trainer import Antolik_dataset_preparation_function
 
 
 ENTITY = "csng-cuni"
@@ -119,21 +119,6 @@ def get_config(
         "generate_oracle_figure": False,
     }
 
-    # OLD ANTOLIK DATASET CONFIG
-    # config.update(
-    #     {
-    #         "ground_truth_positions_file_path": "data/antolik/position_dictionary.pickle",
-    #         "ground_truth_orientations_file_path": "data/antolik/oris.pickle",
-    #         "init_to_ground_truth_positions": True,
-    #         "init_to_ground_truth_orientations": True,
-    #         "freeze_positions": False,
-    #         "freeze_orientations": False,
-    #         "orientation_shift": 87.42857142857143,
-    #         "factor": 5.5,
-    #         "filtered_neurons":None,
-    #     }
-    # )
-
     # THE NEW REPARAMETRIZED ANTOLIK DATASET CONFIG
     # CONFIG FOR THE TYPE OF THE MODEL
     #    - init to ground truth positions/orientations
@@ -205,7 +190,7 @@ def main():
 
     model = run_wandb_training(
         config,
-        Antolik_dataset_preparation_function_general,
+        Antolik_dataset_preparation_function,
         ENTITY,
         PROJECT,
         model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling

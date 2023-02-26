@@ -1,6 +1,6 @@
 from model_trainer import run_wandb_training
 from models import reCNN_bottleneck_CyclicGauss3d_no_scaling
-from model_trainer import Lurz_dataset_preparation_function, Antolik_dataset_preparation_function_test
+from model_trainer import Lurz_dataset_preparation_function, Antolik_dataset_preparation_function
 
 
 ENTITY = "csng-cuni"
@@ -87,7 +87,7 @@ config.update(
 
 def main():
     
-    model = run_wandb_training(config, Antolik_dataset_preparation_function_test, ENTITY, PROJECT, model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling)
+    model = run_wandb_training(config, Antolik_dataset_preparation_function, ENTITY, PROJECT, model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling)
     return model
     
 

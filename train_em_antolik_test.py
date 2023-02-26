@@ -1,6 +1,6 @@
 from model_trainer import run_wandb_training
 from energy_model.energy_model import EnergyModel
-from model_trainer import Antolik_dataset_preparation_function_general
+from model_trainer import Antolik_dataset_preparation_function
 from train_on_antolik import get_config
 
 
@@ -68,7 +68,7 @@ def main():
 
     model = run_wandb_training(
         config,
-        Antolik_dataset_preparation_function_general,
+        Antolik_dataset_preparation_function,
         ENTITY,
         PROJECT,
         model_class=EnergyModel
