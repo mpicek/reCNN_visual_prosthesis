@@ -11,7 +11,6 @@ from models import reCNN_bottleneck_CyclicGauss3d
 from datetime import timedelta
 
 from pprint import pprint
-
 from Antolik_dataset import AntolikDataModule
 
 
@@ -122,6 +121,7 @@ def Antolik_dataset_preparation_function(config, run=None, load_data=True):
             "stimulus_crop": config["stimulus_crop"],
             "ground_truth_positions_file_path": config["ground_truth_positions_file_path"],
             "ground_truth_orientations_file_path": config["ground_truth_orientations_file_path"],
+            "num_workers": 0,
         }
 
     if run is not None:
@@ -168,19 +168,21 @@ def get_model(
     # Set up model
     if config["needs_ground_truth"]:
         pos_x, pos_y, orientations = dm.get_ground_truth(
-            config["ground_truth_positions_file_path"], 
-            config["ground_truth_orientations_file_path"], 
+            ground_truth_positions_file_path=config["ground_truth_positions_file_path"], 
+            ground_truth_orientations_file_path=config["ground_truth_orientations_file_path"], 
             in_degrees=False, 
-            minus_y=config["minus_y"], 
-            minus_x=config["minus_x"], 
-            swap_axes=config["swap_axes"]
+            positions_minus_y=config["positions_minus_y"], 
+            positions_minus_x=config["positions_minus_x"], 
+            positions_swap_axes=config["positions_swap_axes"]
         )
         resolution = (dm.get_input_shape()[1], dm.get_input_shape()[2])
         xlim = [-dm.get_stimulus_visual_angle()/2, dm.get_stimulus_visual_angle()/2]
         ylim = [-dm.get_stimulus_visual_angle()/2, dm.get_stimulus_visual_angle()/2]
         model = model_class(pos_x, pos_y, orientations, resolution, xlim, ylim, **config)
     elif config["model_needs_dataloader"]:
-        model = model_class(dataloader=dm, **config)
+        # model = model_class(dataloader=dm, **config)
+        model = model_class(**config)
+        model.init_neurons(dm)
     else:
         model = model_class(**config)
     
@@ -234,6 +236,8 @@ def run_wandb_training(
     
     pprint(config)
 
+    print("Setting up the dataset...")
+
     dm = dataset_preparation_function(config, None)
 
     model = get_model(config, dm, model_class)
@@ -255,7 +259,7 @@ def run_wandb_training(
     # we put it into brno2 storage as it is much much larger than the default budejovice1 storage
     # TODO (change in future)
     checkpoint_callback = ModelCheckpoint(
-        dirpath="/storage/brno2/home/mpicek/MODEL_CHECKPOINTS/" + wandb.run.name, save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
+        dirpath="/storage/brno2/home/mpicek/MODEL_CHECKPOINTS/" + wandb.run.name, save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode#, save_weights_only=True
     )
 
     # define the trainer
@@ -385,11 +389,12 @@ def run_training_without_logging(
     # Access all hyperparameter values through wandb.config
     # config = dict(wandb.config)
     pprint(config)
+    pl.seed_everything(config["seed"], workers=True)
 
     dm = dataset_preparation_function(config, None)
 
     # Set up model
-    model = model_class(**config)
+    model = get_model(config, dm, model_class)
 
     # summary(model, torch.zeros((config["batch_size"], dm.get_input_shape()[0], dm.get_input_shape()[1], dm.get_input_shape()[2])))
 
@@ -403,26 +408,21 @@ def run_training_without_logging(
         patience=config["patience"],
         mode=early_stopping_mode,
     )
-    checkpoint_callback = ModelCheckpoint(
-        save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
-    )
+    # checkpoint_callback = ModelCheckpoint(
+    #     save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
+    # )
 
-    class LitProgressBar(ProgressBar):
-        def get_metrics(self, trainer, model):
-            # don't show the version number
-            items = super().get_metrics(trainer, model)
-            items.pop("v_num", None)
-            return items
-
-    bar = LitProgressBar()
+    # checkpoint_callback = ModelCheckpoint(
+    #     dirpath="/storage/brno2/home/mpicek/MODEL_CHECKPOINTS/" + wandb.run.name, save_top_k=1, monitor=model_checkpoint_monitor, mode=model_checkpoint_mode
+    # )
 
     # define the trainer
     trainer = pl.Trainer(
-        callbacks=[early_stop, checkpoint_callback, bar],
+        callbacks=[early_stop],
         max_epochs=config["max_epochs"],
         gpus=[0],
-        # logger=wandb_logger,
-        log_every_n_steps=1,
+        logger=False,
+        log_every_n_steps=100,
         # deterministic=True,
         enable_checkpointing=True,
     )
@@ -441,25 +441,25 @@ def run_training_without_logging(
             val_dataloaders=dm.val_dataloader(),
         )
 
-    best_observed_val_metric = (
-        checkpoint_callback.best_model_score.cpu().detach().numpy()
-    )
-    print(
-        "Best model's "
-        + config["observed_val_metric"]
-        + ": "
-        + str(best_observed_val_metric)
-    )
+    # best_observed_val_metric = (
+    #     checkpoint_callback.best_model_score.cpu().detach().numpy()
+    # )
+    # print(
+    #     "Best model's "
+    #     + config["observed_val_metric"]
+    #     + ": "
+    #     + str(best_observed_val_metric)
+    # )
 
     # add best corr to metadata
-    metadata = {**config, "best_model_score": best_observed_val_metric}
+    # metadata = {**config, "best_model_score": best_observed_val_metric}
 
-    print(checkpoint_callback.best_model_path)
+    # print(checkpoint_callback.best_model_path)
 
-    model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
+    # model = model_class.load_from_checkpoint(checkpoint_callback.best_model_path)
 
-    if config["test"]:
-        dm.model_performances(model, trainer)
+    # if config["test"]:
+    #     dm.model_performances(model, trainer)
 
         # result_artifact = wandb.Artifact(name="RESULT_" + model_artifact_name, type="result",
         #     metadata=results[0])

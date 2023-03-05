@@ -138,7 +138,7 @@ class AntolikDataset(Dataset):
         """
         return [list(self.data.keys())[i] for i in range(self.__len__())]
     
-    def get_ground_truth(self, ground_truth_positions_file_path=None, ground_truth_orientations_file_path=None, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
+    def get_ground_truth(self, ground_truth_positions_file_path=None, ground_truth_orientations_file_path=None, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False, **kwargs):
         """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
            (in radians) of the Antolik's model's ground truth.
         
@@ -161,7 +161,7 @@ class AntolikDataset(Dataset):
         
         if ground_truth_orientations_file_path is None:
             ground_truth_orientations_file_path = self.ground_truth_orientations_file_path
-
+        
         pos_dict = pickle_read(ground_truth_positions_file_path)
         target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
 
@@ -169,18 +169,18 @@ class AntolikDataset(Dataset):
             target_positions = target_positions[filtered_neurons, :]
 
         pos_x = None
-        if minus_x:
+        if positions_minus_x:
             pos_x = (-target_positions[:,0])
         else:
             pos_x = (target_positions[:,0])
 
         pos_y = None
-        if minus_y:
+        if positions_minus_y:
             pos_y = (-target_positions[:,1])
         else:
             pos_y = (target_positions[:,1])
-        
-        if swap_axes:
+
+        if positions_swap_axes:
             pos_x, pos_y = pos_y, pos_x
 
 
@@ -214,6 +214,7 @@ class AntolikDataModule(pl.LightningDataModule):
         brain_crop=None,
         stimulus_crop=None,
         ground_truth_positions_file_path=None,
+        ground_truth_orientations_file_path=None,
         original_stimulus_visual_angle=11,
         original_stimulus_resolution=110
     ):
@@ -259,7 +260,8 @@ class AntolikDataModule(pl.LightningDataModule):
         # it is uncropped, so by default, the stimulus_visual_angle is the same as initialized
         # (but will be adjusted in set_stimulus_crop)
         self.stimulus_visual_angle = original_stimulus_visual_angle
-
+        self.ground_truth_positions_file_path = ground_truth_positions_file_path
+        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
 
         # automatically compute the crop of the stimulus image
         if self.brain_crop and self.stimulus_crop == "auto":
@@ -284,8 +286,6 @@ class AntolikDataModule(pl.LightningDataModule):
         
         elif self.stimulus_crop is not None:
             self.stimulus_visual_angle = (self.original_stimulus_visual_angle / self.original_stimulus_resolution) * self.stimulus_crop[0] # it is a square
-
-        self.ground_truth_positions_file_path = ground_truth_positions_file_path
 
 
     def prepare_data(self):
@@ -326,12 +326,11 @@ class AntolikDataModule(pl.LightningDataModule):
         # when stage=None -> both "fit" and "test"
 
         self.train_dataset = AntolikDataset(
-            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path
+            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path, self.ground_truth_orientations_file_path
         )
 
-        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path)
+        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path, self.ground_truth_orientations_file_path)
 
-        print("Data loaded successfully!")
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None:
@@ -355,6 +354,8 @@ class AntolikDataModule(pl.LightningDataModule):
             indices = np.arange(0, len(self.test_dataset))
             subset_idx_test = [list(self.test_dataset.data.keys())[i] for i in indices]
             self.test_sampler = SubsetSequentialSampler(subset_idx_test)
+        
+        print("Data loaded successfully!")
 
     def get_stimulus_visual_angle(self):
         """Returns how much the stimulus spans.
@@ -366,7 +367,7 @@ class AntolikDataModule(pl.LightningDataModule):
         """
         return self.stimulus_visual_angle
     
-    def get_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False, **kwargs):
+    def get_ground_truth(self, **kwargs):
         """Returns positions in x and y dimensions (in degrees of visual angle) and preferred orientations
            (in radians) of the Antolik's model's ground truth.
         
@@ -380,12 +381,12 @@ class AntolikDataModule(pl.LightningDataModule):
         Returns:
             tuple: numpy arrays pos_x, pos_y, target_ori (in radians!)
         """
-        return self.train_dataset.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, minus_y, minus_x, swap_axes)
+        return self.train_dataset.get_ground_truth(**kwargs)
     
-    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, minus_y=False, minus_x=False, swap_axes=False):
+    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False):
         
         fig, ax = plt.subplots()
-        x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, minus_y, minus_x, swap_axes)
+        x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, positions_minus_y, positions_minus_x, positions_swap_axes)
         reconstruct_orientation_maps(x, y, o, fig, ax, save, 12, 2.4, 2.4, img_path, suffix, neuron_dot_size)
 
     def get_input_shape(self):

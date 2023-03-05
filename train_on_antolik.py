@@ -31,9 +31,8 @@ brain_crop = None # 0.8
 stimulus_crop = None # "auto" or [110, 110]
 
 # only on of these can be True (or neither of them), if both were, it would be a double negation and reCNN would be set to the same y as the ground truth 
-negative_y_coordinate = True # this says that readout (when being set to the ground truth) has to put minus in front of y
-minus_y = False # this says that dataset has to put minus in front of y when loading the ground truth
-
+positions_minus_y = False # this says that dataset has to put minus in front of y when loading the ground truth
+positions_minus_x = False
 
 ################################################################
 
@@ -54,16 +53,24 @@ def get_config(
     lr = 0.001,
     brain_crop = None,
     stimulus_crop = None,
-    negative_y_coordinate = True,
-    minus_y = False,
     default_ori_shift = 90, # for energy model
     counter_clockwise_rotation = True, # for energy model
+    positions_minus_y = True,
+    positions_minus_x = False,
+    positions_swap_axes = False,
+    readout_bias = False,
 ):
     # path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
     # path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
 
-    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/one_trials.pickle"
-    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/ten_trials.pickle"
+    import os
+    scratch = os.getenv("SCRATCHDIR")
+    path_train = scratch + "/one_trials.pickle"
+    path_test = scratch + "/ten_trials.pickle"
+
+
+    # path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/one_trials.pickle"
+    # path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/ten_trials.pickle"
 
     config = {
         # GENERAL
@@ -74,19 +81,21 @@ def get_config(
         "needs_ground_truth": needs_ground_truth,
         "model_needs_dataloader": model_needs_dataloader,
         # CORE GENERAL CONFIG
-        "core_hidden_channels": 8,
-        "core_layers": 3,
-        "core_input_kern": 7,
-        "core_hidden_kern": 9,
+        "core_hidden_channels": 3,
+        # "core_layers": 3,
+        "core_layers": 1,
+        "core_input_kern": 3,
+        "core_hidden_kern": 3,
         # ROTATION EQUIVARIANCE CORE CONFIG
-        "num_rotations": 8,
+        # "num_rotations": 8,
+        "num_rotations": 4,
         "stride": 1,
         "upsampling": 2,
         "rot_eq_batch_norm": True,
         "stack": -1,
         "depth_separable": True,
         # READOUT CONFIG
-        "readout_bias": False,
+        "readout_bias": readout_bias,
         "nonlinearity": "softplus",
         "do_not_sample": do_not_sample,
         # REGULARIZATION
@@ -103,9 +112,8 @@ def get_config(
         # BOTTLENECK
         "bottleneck_kernel": 15,
         "fixed_sigma": False,
-        "init_mu_range": 0.9,
-        "init_sigma_range": 0.8,
-        "max_time": max_time,
+        "init_mu_range": 0.3,
+        "init_sigma_range": 0.1,
 
         # TRAINER
         "patience": patience,
@@ -118,6 +126,13 @@ def get_config(
         "jackknife_oracle": True,
         "generate_oracle_figure": False,
     }
+
+    if max_time > 0:
+        config.update(
+            {
+                "max_time": max_time,
+            }
+        )
 
     # THE NEW REPARAMETRIZED ANTOLIK DATASET CONFIG
     # CONFIG FOR THE TYPE OF THE MODEL
@@ -146,11 +161,12 @@ def get_config(
             "val_size": 5000,
             "brain_crop": brain_crop,
             "stimulus_crop": stimulus_crop,
-            "minus_y": minus_y,
+            "positions_minus_y": positions_minus_y,
+            "positions_minus_x": positions_minus_x,
+            "positions_swap_axes": positions_swap_axes,
         }
     )
 
-    config.update({"negative_y_coordinate":negative_y_coordinate})
     config.update({"train_on_test": train_on_test})
 
     # for energy model:
@@ -184,8 +200,7 @@ def main():
         lr,
         brain_crop,
         stimulus_crop,
-        negative_y_coordinate,
-        minus_y,
+        positions_minus_y,
     )
 
     model = run_wandb_training(
