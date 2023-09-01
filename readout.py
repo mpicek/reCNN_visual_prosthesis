@@ -88,7 +88,7 @@ class Gaussian3dCyclic(readouts.Readout):
         self.grid_shape = (1, 1, outdims, 1, 3)
         self.do_not_sample = do_not_sample
         self.mu = Parameter(
-            torch.Tensor(*self.grid_shape)
+            torch.Tensor(*self.grid_shape), requires_grad=False
         )  # mean location of gaussian for each neuron
         self.sigma = Parameter(
             torch.Tensor(*self.grid_shape)
