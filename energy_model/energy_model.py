@@ -12,6 +12,8 @@ from neuralpredictors.measures.np_functions import (
     oracle_corr_conservative,
 )
 
+import predict_neural_responses.dnn_blocks.dnn_blocks as bl
+
 """
 An energy model consists of 2 gabor filters shifted by 90 degrees in phase.
 In a regular energy model, each neuron would have own sigma_x, sigma_y, f,..., but
@@ -46,9 +48,12 @@ class EnergyModel(pl.LightningModule):
         counter_clockwise_rotation=True,
         multivariate=True,
         scale_init=None,
-        sigma_init=None,
         f_init=None,
         bias_init=None,
+        exact_init=False,
+        sigma_x_init=None,
+        sigma_y_init=None,
+        nonlinearity=None,
         **config,
     ):
         """Constructor.
@@ -72,7 +77,7 @@ class EnergyModel(pl.LightningModule):
         super().__init__()
 
         self.minimum_sigma = 0.01 # minimum sigma value
-        self.response_clamp_minimum = 0.0 # minimum response value (cannot be negative)
+        self.response_clamp_minimum = 0.00001 # minimum response value (cannot be negative)
         min_init_sigma_value = 0.01
         min_init_f_value = 0.00001
 
@@ -85,32 +90,64 @@ class EnergyModel(pl.LightningModule):
         self.lr = lr
         self.loss = PoissonLoss()
         self.corr = Corr()
-        self.num_neurons = len(orientations)  # number of neurons
+        self.num_neurons = len(orientations)
         self.multivariate = multivariate
         self.resolution = resolution
 
-        # initializing the parameters
-        if scale_init is not None:
-            self.scale = torch.nn.Parameter(torch.FloatTensor(1).uniform_(scale_init - 0.05, scale_init + 0.05))
-        else:
-            self.scale = torch.nn.Parameter(torch.rand(1))
+        self.cor = torch.nn.Parameter(torch.ones(1) * 1.0)
 
-        if bias_init is not None:
-            self.bias = torch.nn.Parameter(torch.FloatTensor(1).uniform_(bias_init - 0.05, bias_init + 0.05))
+        if nonlinearity is None:
+            self.nonlin = None
         else:
-            self.bias = torch.nn.Parameter(torch.rand(1))
-        
-        if sigma_init is not None:
-            self.sigma_x = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_init - 0.05, sigma_init + 0.05))
-            self.sigma_y = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_init - 0.05, sigma_init + 0.05))
+            self.nonlin = bl.act_func()[nonlinearity]
+
+        # initializing the parameters
+        if exact_init:
+            if scale_init is not None:
+                self.scale = torch.nn.Parameter(torch.ones(1) * scale_init)
+            else:
+                self.scale = torch.nn.Parameter(torch.rand(1))
+
+            if bias_init is not None:
+                self.bias = torch.nn.Parameter(torch.ones(1) * bias_init)
+            else:
+                self.bias = torch.nn.Parameter(torch.rand(1))
+            
+            if sigma_x_init is not None and sigma_y_init is not None:
+                self.sigma_x = torch.nn.Parameter(torch.ones(1) * sigma_x_init)
+                self.sigma_y = torch.nn.Parameter(torch.ones(1) * sigma_y_init)
+            else:
+                self.sigma_x = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
+                self.sigma_y = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
+            
+            if f_init is not None:
+                self.f = torch.nn.Parameter(torch.ones(1) * f_init)
+            else:
+                self.f = torch.nn.Parameter(torch.rand(1) + min_init_f_value)
+            
         else:
-            self.sigma_x = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
-            self.sigma_y = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
-        
-        if f_init is not None:
-            self.f = torch.nn.Parameter(torch.FloatTensor(1).uniform_(f_init - 0.05, f_init + 0.05))
-        else:
-            self.f = torch.nn.Parameter(torch.rand(1) + min_init_f_value)
+            if scale_init is not None:
+                self.scale = torch.nn.Parameter(torch.FloatTensor(1).uniform_(scale_init - 0.05, scale_init + 0.05))
+            else:
+                self.scale = torch.nn.Parameter(torch.rand(1))
+
+            if bias_init is not None:
+                self.bias = torch.nn.Parameter(torch.FloatTensor(1).uniform_(bias_init - 0.05, bias_init + 0.05))
+            else:
+                self.bias = torch.nn.Parameter(torch.rand(1))
+            
+            if sigma_x_init is not None and sigma_y_init is not None:
+                self.sigma_x = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_x_init - 0.05, sigma_x_init + 0.05))
+                self.sigma_y = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_y_init - 0.05, sigma_y_init + 0.05))
+            else:
+                self.sigma_x = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
+                self.sigma_y = torch.nn.Parameter(torch.rand(1) + min_init_sigma_value)
+            
+            if f_init is not None:
+                self.f = torch.nn.Parameter(torch.FloatTensor(1).uniform_(f_init - 0.05, f_init + 0.05))
+            else:
+                self.f = torch.nn.Parameter(torch.rand(1) + min_init_f_value)
+            
 
         # convert the default orientation shift to radians
         self.default_ori_shift = (default_ori_shift / 180) * np.pi
@@ -127,6 +164,10 @@ class EnergyModel(pl.LightningModule):
             "orientations", torch.from_numpy(orientations.astype("float32"))
         )
 
+        print(resolution)
+        print(xlim)
+        print(ylim)
+        print("-------------")
         self.init_gabor_filters(resolution, xlim, ylim)
 
         self.save_hyperparameters()
@@ -170,11 +211,15 @@ class EnergyModel(pl.LightningModule):
 
         # we shift the orientations by the default shift
         shifted_orientation = torch.remainder(
-            self.orientations + self.default_ori_shift, np.pi
+            self.orientations + self.default_ori_shift, np.pi ##################################################################################### 2*np.pi
         )
 
         meshgrid_x_rotated = None
         meshgrid_y_rotated = None
+
+        self.original_positions_x = self.positions_x
+        self.original_positions_y = self.positions_y
+
 
         # we rotate the meshgrids according to the shifted orientations
         if self.counter_clockwise_rotation:
@@ -184,6 +229,11 @@ class EnergyModel(pl.LightningModule):
             meshgrid_y_rotated = meshgrid_x * torch.sin(
                 shifted_orientation[:, None, None]
             ) + meshgrid_y * torch.cos(shifted_orientation[:, None, None])
+
+            tmp_x = np.cos(shifted_orientation) * self.positions_x - np.sin(shifted_orientation) * self.positions_y
+            tmp_y = np.sin(shifted_orientation) * self.positions_x + np.cos(shifted_orientation) * self.positions_y
+            self.positions_x = tmp_x
+            self.positions_y = tmp_y
         else:
             meshgrid_x_rotated = meshgrid_x * torch.cos(
                 shifted_orientation[:, None, None]
@@ -192,6 +242,12 @@ class EnergyModel(pl.LightningModule):
                 shifted_orientation[:, None, None]
             ) + meshgrid_y * torch.cos(shifted_orientation[:, None, None])
 
+            tmp_x = np.cos(shifted_orientation) * self.positions_x + np.sin(shifted_orientation) * self.positions_y
+            tmp_y = -np.sin(shifted_orientation) * self.positions_x + np.cos(shifted_orientation) * self.positions_y
+            self.positions_x = tmp_x
+            self.positions_y = tmp_y
+
+            
         # and we register the meshgrids in pytorch
         self.register_buffer("meshgrid_x_rotated", meshgrid_x_rotated)
         self.register_buffer("meshgrid_y_rotated", meshgrid_y_rotated)
@@ -212,19 +268,21 @@ class EnergyModel(pl.LightningModule):
         # the gaussian is applied
         gaussian_filter = None
         if self.multivariate: # multivariate => sigma for both x and y dimensions
+            
+            # THE VALUE PASSED INTO EXP MUST NOT BE TOO LARGE, OTHERWISE THE EXP WILL EXPLODE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             gaussian_filter = torch.exp(
                 -0.5
                 * (
                     # copy positions (vector) to each position. It is aligned with the 0th axis... [i, :, :] are same numbers (copied)
                     (
                         torch.square(
-                            self.meshgrid_x_rotated + self.positions_x[:, None, None]
+                            self.meshgrid_x_rotated - self.positions_x[:, None, None]
                         )
                         / (torch.square(self.sigma_x) + self.minimum_sigma) # + minimum_sigma as we don't want to divide by 0
                     )
                     + (
                         torch.square(
-                            self.meshgrid_y_rotated + self.positions_y[:, None, None]
+                            self.meshgrid_y_rotated - self.positions_y[:, None, None]
                         )
                         / (torch.square(self.sigma_y) + self.minimum_sigma) # + minimum_sigma as we don't want to divide by 0
                     )
@@ -237,13 +295,13 @@ class EnergyModel(pl.LightningModule):
                     # copy positions (vector) to each position. It is aligned with the 0th axis... [i, :, :] are same numbers (copied)
                     (
                         torch.square(
-                            self.meshgrid_x_rotated + self.positions_x[:, None, None]
+                            self.meshgrid_x_rotated - self.positions_x[:, None, None]
                         )
                         / (torch.square(self.sigma_x) + self.minimum_sigma) # + minimum_sigma as we don't want to divide by 0
                     )
                     + (
                         torch.square(
-                            self.meshgrid_y_rotated + self.positions_y[:, None, None]
+                            self.meshgrid_y_rotated - self.positions_y[:, None, None]
                         )
                         / (torch.square(self.sigma_x) + self.minimum_sigma) # + minimum_sigma as we don't want to divide by 0
                     )
@@ -278,6 +336,7 @@ class EnergyModel(pl.LightningModule):
         # we do the tensordot in the corresponding dimensions matching x_pixels and y_pixels
         # it returns a tensor of shape [batch_size, num_neurons].. so there is a response of each filter
         # for each image in the batch
+        # x += self.bias
         filtered_image_odd = torch.tensordot(
             x, self.odd_gabor_filter, dims=[[1, 2], [1, 2]]
         )
@@ -287,15 +346,31 @@ class EnergyModel(pl.LightningModule):
 
         # response of each neuron to each image in a batch .. therefore shape of [batch_size, num_neurons]
         # we scale the response by self.scale and add bias self.bias
-        energy_model_response = self.scale * torch.sqrt(
-            torch.square(filtered_image_odd) + torch.square(filtered_image_even)
-        ) + self.bias
+        
+        energy_model_response = None
+        
+        # if self.nonlin is None:
+        # energy_model_response = self.scale * torch.sqrt(
+        #     torch.square(filtered_image_odd) + torch.square(filtered_image_even)
+        # )# + self.bias
+
+        energy_model_response = self.bias + self.scale * torch.sqrt(torch.square(filtered_image_odd) + torch.square(filtered_image_even))
+
+        # energy_model_response = self.final_nonlinearity(self.odd_nonlinearity(torch.square(filtered_image_odd)) + self.even_nonlinearity(torch.square(filtered_image_even)))
+
+        # else:
+        #     energy_model_response = self.scale * self.nonlin(
+        #         torch.square(filtered_image_odd) + torch.square(filtered_image_even)
+        #     ) + self.bias
 
         # as the response has to be non-negative, we clamp the values
+        # print("uz neklampuje _____")
         energy_model_response_clamped = torch.clamp(energy_model_response, min=self.response_clamp_minimum)
+        # return energy_model_response
+        # print(energy_model_response_clamped[0][0])
 
         return energy_model_response_clamped
-
+    
     def configure_optimizers(self):
         """Configures the optimizer for the training of the model (Adam).
 
@@ -321,13 +396,28 @@ class EnergyModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         img, resp = batch
         prediction = self.forward(img)
+        # print("pred")
+        # print(prediction[0,0])
+        # print("resp")
+        # print(resp[0,0])
         loss = self.loss(prediction, resp)
+        # print("loss")
+        # print(loss)
         self.log("val/loss", loss)
         self.log("val/sigma_x", self.sigma_x)
         self.log("val/sigma_y", self.sigma_y)
         self.log("val/f", self.f)
         self.log("val/scale", self.scale)
         self.log("val/bias", self.bias)
+        # print("----------------")
+        # print(resp.mean())
+        # print(resp.std())
+        # print(resp.max())
+        # print(resp.min())
+        # print(prediction.mean())
+        # print(prediction.std())
+        # print(prediction.max())
+        # print(prediction.min())
 
         return prediction, resp
 
@@ -445,19 +535,15 @@ class EnergyModel(pl.LightningModule):
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
         self.predictions = predictions
         self.responses = responses
-        print(correlation.max())
-        print(correlation.argmax())
-        print(correlation.min())
-        print(correlation.argmin())
-        self.log("val/corr", np.mean(correlation))
         print(np.mean(correlation))
-        # self.visualize(444)
+        print(np.mean(correlation))
+        self.log("val/corr", np.mean(correlation))
 
     def visualize(
         self,
         neuron_id,
         odd=True,
-        init=False,
+        init=True,
         title="",
         vmin=None,
         vmax=None,
@@ -524,6 +610,8 @@ class EnergyModel(pl.LightningModule):
 
         else:
             gabor = gabor[neuron_id, :, :]
+            gabor *= self.scale.cpu().detach().numpy()
+            gabor += self.bias.cpu().detach().numpy()
         
         plt.clf()
         plt.gca().set_aspect("equal", adjustable="box")
@@ -541,13 +629,13 @@ class EnergyModel(pl.LightningModule):
             color_map = "Greys_r"
         else:
             color_map = cm.coolwarm
-        plt.imshow(gabor, vmax=max, vmin=min, cmap=color_map)
+        ahoj = plt.imshow(gabor, vmax=max, vmin=min, cmap=color_map)
 
         if title == "" and neuron_id != "all":
             shifted_orientation = np.mod(
                 self.orientations + self.default_ori_shift, np.pi
             )
-            title = f"Neuron {neuron_id} \n with position [{self.positions_x[neuron_id]:.2f}, {self.positions_y[neuron_id]:.2f}] \n and pref. orientation {self.orientations[neuron_id]:.2f}rad, (with default shift:{shifted_orientation[neuron_id]:.2f}rad)"
+            title = f"Neuron {neuron_id} \n with position [{self.original_positions_x[neuron_id]:.2f}, {self.original_positions_y[neuron_id]:.2f}] \n and pref. orientation {self.orientations[neuron_id]:.2f}rad, (with default shift:{shifted_orientation[neuron_id]:.2f}rad)"
         elif title == "" and neuron_id == "all":
             title = "Visual field of all neurons\n(where the position influences the response\nby at least 1/1000 of maximal influence of the filter)"
 
@@ -729,18 +817,18 @@ class EnergyModelIndividual(pl.LightningModule):
         self.register_buffer("meshgrid_x_rotated", meshgrid_x_rotated)
         self.register_buffer("meshgrid_y_rotated", meshgrid_y_rotated)
 
-    def on_after_backward(self):
-        print("on_after_backward----------------------------")
-        print("on_after_backward----------------------------")
-        print("on_after_backward----------------------------")
-        print("on_after_backward----------------------------")
-        # global_step = self.global_step
-        for name, param in self.named_parameters():
-            if param.requires_grad:
-                print(name)
-                print(torch.isnan(param.grad).any())
-                print(torch.isinf(param.grad).any())
-                print(param.grad.max())
+    # def on_after_backward(self):
+    #     print("on_after_backward----------------------------")
+    #     print("on_after_backward----------------------------")
+    #     print("on_after_backward----------------------------")
+    #     print("on_after_backward----------------------------")
+    #     # global_step = self.global_step
+    #     for name, param in self.named_parameters():
+    #         if param.requires_grad:
+    #             print(name)
+    #             print(torch.isnan(param.grad).any())
+    #             print(torch.isinf(param.grad).any())
+    #             print(param.grad.max())
 
     def forward(self, x):
 
@@ -887,22 +975,22 @@ class EnergyModelIndividual(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         img, resp = batch
         prediction = self.forward(img)
-        print(torch.isnan(prediction).any())
+        # print(torch.isnan(prediction).any())
         assert (prediction > 0).all()
         loss = self.loss(prediction, resp)
-        print('loss: ----------------------------------')
-        print(torch.isnan(loss).any())
-        print(torch.log(prediction + 1e-12).max())
-        print(torch.log(prediction + 1e-12).min())
-        print(torch.log(prediction + 1e-12).min())
-        # print(loss.max())
-        print(torch.isinf(torch.log(prediction + 1e-12)).any())
-        print(torch.isnan(torch.log(prediction + 1e-12)).any())
-        print(torch.isinf(loss).any())
+        # print('loss: ----------------------------------')
+        # print(torch.isnan(loss).any())
+        # print(torch.log(prediction + 1e-12).max())
+        # print(torch.log(prediction + 1e-12).min())
+        # print(torch.log(prediction + 1e-12).min())
+        # # print(loss.max())
+        # print(torch.isinf(torch.log(prediction + 1e-12)).any())
+        # print(torch.isnan(torch.log(prediction + 1e-12)).any())
+        # print(torch.isinf(loss).any())
 
-        print("kde je to posranyyyyyyyyyyyyyy")
-        print(prediction[torch.isnan(loss)])
-        print(resp[torch.isnan(loss)])
+        # print("kde je to posranyyyyyyyyyyyyyy")
+        # print(prediction[torch.isnan(loss)])
+        # print(resp[torch.isnan(loss)])
 
         self.log("train/loss", loss)
         # self.log("val/loss", loss)
