@@ -164,10 +164,6 @@ class EnergyModel(pl.LightningModule):
             "orientations", torch.from_numpy(orientations.astype("float32"))
         )
 
-        print(resolution)
-        print(xlim)
-        print(ylim)
-        print("-------------")
         self.init_gabor_filters(resolution, xlim, ylim)
 
         self.save_hyperparameters()
