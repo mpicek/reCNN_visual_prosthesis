@@ -1,0 +1,39 @@
+program: train_em_antolik_test.py
+method: grid
+metric:
+  goal: maximize
+  name: val/corr
+parameters:
+  seed:
+    # values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+    values: [1]
+  default_ori_shift:
+    values: [90]
+  counter_clockwise_rotation:
+    values: [True]
+  positions_minus_y:
+    values: [False]
+  positions_minus_x:
+    values: [True]
+  positions_swap_axes:
+    values: [False]
+  
+  
+  f_init:
+    values: [0.8, 1.2]
+  scale_init:
+    values: [0.3]
+  exact_init:
+    values: [True]
+  sigma_x_init:
+    values: [0.1, 0.2, 0.34, 0.5]
+  sigma_y_init:
+    values: [0.1, 0.2, 0.34, 0.5]
+  bias_init:
+    values: [2.5]
+  # lr:
+    # values: [0.01]
+  multivariate:
+    values: [True]
+
+

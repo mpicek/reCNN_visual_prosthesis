@@ -1,0 +1,65 @@
+program: train_on_antolik.py
+method: bayes
+metric:
+  goal: minimize
+  name: val/loss
+parameters:
+  core_gamma_hidden:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 1.0
+  core_gamma_input:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.5
+  core_input_kern:
+    values: [9, 11, 13, 15, 17, 19, 21, 23, 25]
+  core_hidden_kern:
+    values: [9, 11, 13, 15, 17, 19, 21, 23, 25]
+  bottleneck_kernel:
+    values: [9, 11, 13, 15, 17, 19, 21, 23, 25]
+  core_layers:
+    values: [3, 4, 5]
+  num_rotations:
+    values: [12]
+  core_hidden_channels:
+    values: [1, 2, 3]
+  upsampling:
+    values: [1]
+  lr:
+    values: [0.001]
+  fixed_sigma:
+    values: [False]
+  init_sigma_range:
+    values: [0.005]
+  depth_separable:
+    values: [True]
+
+  # core_gamma_hidden:
+  #   values: [0.28463619129195233]
+  # core_gamma_input:
+  #   values: [0.00307424496692959]
+  # core_input_kern:
+  #   values: [7]
+  # core_hidden_kern:
+  #   values: [9]
+  # bottleneck_kernel:
+  #   values: [15]
+  # core_layers:
+  #   values: [5]
+  # num_rotations:
+  #   values: [8]
+  # core_hidden_channels:
+  #   values: [8]
+  # upsampling:
+  #   values: [2]
+  # lr:
+  #   values: [0.001]
+  # init_sigma_range:
+  #   values: [0.05]
+  # depth_separable:
+  #   values: [True]
+  # positions_minus_y:
+  #   values: [True, False]
+  # seed:
+  #   values: [1, 2]
