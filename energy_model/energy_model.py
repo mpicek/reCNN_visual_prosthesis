@@ -12,6 +12,8 @@ from neuralpredictors.measures.np_functions import (
     oracle_corr_conservative,
 )
 
+from neuralpredictors.layers.activations import PiecewiseLinearExpNonlinearity
+
 import predict_neural_responses.dnn_blocks.dnn_blocks as bl
 
 """
@@ -54,6 +56,11 @@ class EnergyModel(pl.LightningModule):
         sigma_x_init=None,
         sigma_y_init=None,
         nonlinearity=None,
+        vmax=30,
+        num_bins=300,
+        em_bias=False,
+        smooth_reg_weight=1,
+        smoothness_reg_order=2,
         **config,
     ):
         """Constructor.
@@ -100,6 +107,8 @@ class EnergyModel(pl.LightningModule):
             self.nonlin = None
         else:
             self.nonlin = bl.act_func()[nonlinearity]
+        
+        self.nonlin = PiecewiseLinearExpNonlinearity(1, bias=em_bias, vmin=0, vmax=vmax, num_bins=num_bins, smooth_reg_weight=smooth_reg_weight, smoothnes_reg_order=smoothness_reg_order)
 
         # initializing the parameters
         if exact_init:
@@ -350,9 +359,14 @@ class EnergyModel(pl.LightningModule):
         #     torch.square(filtered_image_odd) + torch.square(filtered_image_even)
         # )# + self.bias
 
-        energy_model_response = self.bias + self.scale * torch.sqrt(torch.square(filtered_image_odd) + torch.square(filtered_image_even))
+        input_to_nonlin = torch.square(filtered_image_odd) + torch.square(filtered_image_even)
+        input_reshaped = input_to_nonlin.view(-1, 1)
 
-        # energy_model_response = self.final_nonlinearity(self.odd_nonlinearity(torch.square(filtered_image_odd)) + self.even_nonlinearity(torch.square(filtered_image_even)))
+
+        energy_model_response = self.nonlin(input_reshaped)
+
+        energy_model_response = energy_model_response.view(input_to_nonlin.shape)
+
 
         # else:
         #     energy_model_response = self.scale * self.nonlin(
@@ -380,6 +394,9 @@ class EnergyModel(pl.LightningModule):
         img, resp = batch
         prediction = self.forward(img)
         loss = self.loss(prediction, resp)
+        smoothness_penalty = self.nonlin.smoothness_regularizer()
+        loss += smoothness_penalty
+        self.log("train/smoothness_penalty", smoothness_penalty)
         self.log("train/loss", loss)
         self.log("val/loss", loss)
         self.log("val/sigma_x", self.sigma_x)
