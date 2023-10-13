@@ -189,7 +189,7 @@ def run_wandb_training(
 
     # define the trainer
     trainer = None
-    if "max_time" in config.keys():
+    if "max_time" in config.keys() and config["max_time"] != 0:
         trainer = pl.Trainer(
             callbacks=[early_stop, checkpoint_callback],
             max_time=timedelta(hours=config["max_time"]),
