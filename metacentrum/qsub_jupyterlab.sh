@@ -2,7 +2,7 @@
 #PBS -N JupyterLabPyTorch_Job
 #PBS -q gpu
 #PBS -l select=1:ncpus=8:ngpus=1:mem=48gb:scratch_local=100gb:gpu_cap=^cuda80:cluster=^glados:cl_zubat=False
-#PBS -l walltime=12:00:00
+#PBS -l walltime=9:00:00
 #PBS -m ae
 # The 4 lines above are options for scheduling system: job will run 4 hours at maximum, 1 machine with 2 processors + 4gb RAM memory + 10gb scratch memory  are requested, email notification will be sent when the job aborts (a) or ends (e) 
 
@@ -10,7 +10,7 @@
 
 
 # define variables
-SING_IMAGE="/storage/brno2/home/mpicek/image.img"
+SING_IMAGE="/storage/brno2/home/mpicek/img.img"
 HOMEDIR=/storage/praha1/home/$USER # substitute username and path to to your real username and path
 HOSTNAME=`hostname -f`
 PORT="8888"
