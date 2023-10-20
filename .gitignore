@@ -139,3 +139,11 @@ metacentrum/qsub_script.o*
 metacentrum/wandb_api_key.yaml
 artifacts/
 reCNN_visual_prosthesis/
+experiments/MEI_experiments.csv
+metacentrum/compiled
+metacentrum/cmd
+metacentrum/cmd2
+metacentrum/qsub_jupyterlab3.sh
+metacentrum/qsub_smaller.sh
+
+settings.json
