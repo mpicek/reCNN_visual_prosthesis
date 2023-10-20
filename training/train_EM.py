@@ -1,4 +1,8 @@
-from model_trainer import run_wandb_training, run_training_without_logging
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from model_trainer import run_wandb_training
 from energy_model.energy_model import EnergyModel
 from model_trainer import Antolik_dataset_preparation_function
 from utils import get_config
@@ -34,19 +38,6 @@ def main():
     config["seed"] = seed
     config["batch_size"] = batch_size
     config["lr"] = lr
-    
-    # MODEL PARAMETERS
-    # config["core_gamma_hidden"] = 0.008931320307500908
-    # config["bottleneck_kernel"] = 5
-    # config["core_gamma_input"] = 0.2384005754453638
-    # config["core_hidden_channels"] = 5
-    # config["core_hidden_kern"] = 5
-    # config["core_input_kern"] = 5
-    # config["core_layers"] = 4
-    # config["depth_separable"] = True
-    # config["lr"] = 0.0005
-    # config["num_rotations"] = 64
-    # config["upsampling"] = 1
 
     config["train_data_dir"] = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/one_trials.pickle"
     config["test_data_dir"] = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/ten_trials.pickle"
