@@ -18,13 +18,7 @@ from experiments.utils import pickle_read, download_model, reconstruct_orientati
 class AntolikDataset(Dataset):
     """A class for handling with the Antolik's synthetic dataset."""    
 
-    def __init__(self, path, normalize=True,
-                 brain_crop=None,
-                 stimulus_crop=None,
-                 ground_truth_positions_file_path=None, 
-                 ground_truth_orientations_file_path=None,
-                 neurons=[i for i in range(0, 4000)],
-                 ):
+    def __init__(self, path, normalize=True, brain_crop=None, stimulus_crop=None, ground_truth_positions_file_path=None, ground_truth_orientations_file_path=None):
         """The constructor.
 
         Args:
@@ -38,15 +32,13 @@ class AntolikDataset(Dataset):
                 - None if no crop applied (default), otherwise (kept height pixels, kept width pixels) if cropped.
                 - determined by AntolikDataModule
             ground_truth_positions_file_path (str, optional): Path to the file with the ground truth of positions of neurons.
-            neurons (list): list of neurons (subset of all neurons) that are supposed to be in this dataset
         """
         self.normalize = normalize
         self.brain_crop = brain_crop
         self.stimulus_crop = stimulus_crop
         self.ground_truth_positions_file_path = ground_truth_positions_file_path
         self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
-        self.filtered = np.array(neurons)
-        self.dataset_neurons = np.array(neurons)
+        self.filtered = None
         
         if self.stimulus_crop:
             self.set_stimulus_crop(self.stimulus_crop)
@@ -74,9 +66,7 @@ class AntolikDataset(Dataset):
         self.brain_crop = brain_crop
         pos_dict = self.pickle_read(self.ground_truth_positions_file_path)
         target_positions = np.concatenate([pos_dict['V1_Exc_L2/3'].T, pos_dict['V1_Inh_L2/3'].T])
-        filtered_crop = np.where((np.abs(target_positions[:, 0]) <= self.brain_crop) & (np.abs(target_positions[:, 1]) <= self.brain_crop))[0]
-        # filtered neurons are neurons that are in tha dataset & are in the specified area of the brain crop
-        self.filtered = np.intersect1d(filtered_crop, self.dataset_neurons)
+        self.filtered = np.where((np.abs(target_positions[:, 0]) <= self.brain_crop) & (np.abs(target_positions[:, 1]) <= self.brain_crop))[0]
     
     def get_filtered_neurons(self):
         """Returns filtered neurons if brain crop applied, otherwise returns None
@@ -98,7 +88,7 @@ class AntolikDataset(Dataset):
             [self.data[index]["V1_Exc_L2/3"], self.data[index]["V1_Inh_L2/3"]]
         )
 
-        if self.filtered is not None:
+        if self.brain_crop:
             y = y[self.filtered]
 
         data = torch.from_numpy(x)
@@ -226,11 +216,7 @@ class AntolikDataModule(pl.LightningDataModule):
         ground_truth_positions_file_path=None,
         ground_truth_orientations_file_path=None,
         original_stimulus_visual_angle=11,
-        original_stimulus_resolution=110,
-        val_neurons=200,
-        test_neurons=800,
-        num_neurons=5000,
-        different_neurons_in_datasets=True,
+        original_stimulus_resolution=110
     ):
         """The constructor.
 
@@ -254,10 +240,6 @@ class AntolikDataModule(pl.LightningDataModule):
                 - Default: 11 deg of vis angle, that means 5.5 deg of vis angle to each side, that is 5.5 to the right, 5.5 to the left, up and down
                 - this argument might be somewhere in code named x_lim and y_lim (and it is, therefore, for a square image)
             original_stimulus_resolution (int, optional): original resolution of the stimulus (uncropped).. one side, it is a square
-            val_neurons (int): Number of neurons in validation set
-            test_neurons (int): Number of neurons in test set
-            num_neurons (int): Number of all neurons. Train neurons are computed as num_neurons - val_neurons - test_neurons
-            different_neurons_in_datasets (Bool, optional): Whether to use different neurons in each dataset type (train, val, test)
         """
         super().__init__()
         self.train_data_dir = train_data_dir
@@ -280,15 +262,6 @@ class AntolikDataModule(pl.LightningDataModule):
         self.stimulus_visual_angle = original_stimulus_visual_angle
         self.ground_truth_positions_file_path = ground_truth_positions_file_path
         self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
-
-        if different_neurons_in_datasets:
-            self.train_neurons = np.array([i for i in range(0, num_neurons - val_neurons - test_neurons)])
-            self.val_neurons = np.array([i for i in range(num_neurons - val_neurons - test_neurons, num_neurons - test_neurons)])
-            self.test_neurons = np.array([i for i in range(num_neurons - test_neurons, num_neurons)])
-        else:
-            self.train_neurons = np.array([i for i in range(0, num_neurons)])
-            self.val_neurons = np.array([i for i in range(0, num_neurons)])
-            self.test_neurons = np.array([i for i in range(0, num_neurons)])
 
         # automatically compute the crop of the stimulus image
         if self.brain_crop and self.stimulus_crop == "auto":
@@ -352,36 +325,12 @@ class AntolikDataModule(pl.LightningDataModule):
         # stage is "fit" or "test" or "predict"
         # when stage=None -> both "fit" and "test"
 
-
         self.train_dataset = AntolikDataset(
-            self.train_data_dir,
-            self.normalize,
-            self.brain_crop,
-            self.stimulus_crop,
-            self.ground_truth_positions_file_path,
-            self.ground_truth_orientations_file_path,
-            neurons=self.train_neurons
+            self.train_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path, self.ground_truth_orientations_file_path
         )
 
-        self.val_dataset = AntolikDataset(
-            self.train_data_dir,
-            self.normalize,
-            self.brain_crop,
-            self.stimulus_crop,
-            self.ground_truth_positions_file_path,
-            self.ground_truth_orientations_file_path,
-            neurons=self.val_neurons
-        )
+        self.test_dataset = AntolikDataset(self.test_data_dir, self.normalize, self.brain_crop, self.stimulus_crop, self.ground_truth_positions_file_path, self.ground_truth_orientations_file_path)
 
-        self.test_dataset = AntolikDataset(
-            self.test_data_dir,
-            self.normalize,
-            self.brain_crop,
-            self.stimulus_crop,
-            self.ground_truth_positions_file_path,
-            self.ground_truth_orientations_file_path,
-            neurons=self.test_neurons
-        )
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None:
@@ -552,7 +501,7 @@ class AntolikDataModule(pl.LightningDataModule):
             DataLoader: The validation DataLoader
         """   
         return DataLoader(
-            self.val_dataset,
+            self.train_dataset,
             sampler=self.val_sampler,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
@@ -600,19 +549,19 @@ class AntolikDataModule(pl.LightningDataModule):
         """
         model.test_average_batch = False
         model.compute_oracle_fraction = False
-        # val_score = trainer.test(model, self.val_dataloader(), verbose=False)
+        val_score = trainer.test(model, self.val_dataloader(), verbose=False)
         test_score = trainer.test(model, self.test_dataloader(), verbose=False)
 
         model.test_average_batch = True
         model.compute_oracle_fraction = True
         test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
 
-        # val_score = val_score[0]
+        val_score = val_score[0]
         test_score = test_score[0]
         test_repeats_averaged_score = test_repeats_averaged_score[0]
 
-        # print("Validation dataset:")
-        # print(f"    Correlation: {'{:.4f}'.format(val_score['test/corr'])} {'({:.2f} percent of the control model)'.format(100 * (val_score['test/corr'] / control_measures['val/corr'])) if control_measures else ''}")
+        print("Validation dataset:")
+        print(f"    Correlation: {'{:.4f}'.format(val_score['test/corr'])} {'({:.2f} percent of the control model)'.format(100 * (val_score['test/corr'] / control_measures['val/corr'])) if control_measures else ''}")
 
 
         # print("Test dataset:")
@@ -624,7 +573,7 @@ class AntolikDataModule(pl.LightningDataModule):
         print(f"    Fraction oracle jackknife: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_jackknife'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_jackknife'] / control_measures['test/fraction_oracle_jackknife'])) if control_measures else ''}")
 
         returned_measures = {
-            # "val/corr": val_score['test/corr'],
+            "val/corr": val_score['test/corr'],
             "test/repeated_trials/corr": test_repeats_averaged_score['test/repeated_trials/corr'],
             "test/fraction_oracle_conservative":test_repeats_averaged_score['test/fraction_oracle_conservative'],
             "test/fraction_oracle_jackknife":test_repeats_averaged_score['test/fraction_oracle_jackknife']
@@ -654,9 +603,11 @@ class AntolikDataModule(pl.LightningDataModule):
 
 if __name__ == "__main__":
 
-    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/one_trials.pickle"
-    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized/ten_trials.pickle"
-    
+    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
+    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
+
+    path_small_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/small_train.pickle"
+
     dm = AntolikDataModule(path_test, path_test, 10, val_size=500)
     dm.prepare_data()
     dm.setup()
