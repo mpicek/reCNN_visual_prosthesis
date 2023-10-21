@@ -55,7 +55,6 @@ class EnergyModel(pl.LightningModule):
         exact_init=False,
         sigma_x_init=None,
         sigma_y_init=None,
-        nonlinearity=None,
         vmax=30,
         num_bins=300,
         em_bias=False,
@@ -100,28 +99,11 @@ class EnergyModel(pl.LightningModule):
         self.num_neurons = len(orientations)
         self.multivariate = multivariate
         self.resolution = resolution
-
-        self.cor = torch.nn.Parameter(torch.ones(1) * 1.0)
-
-        if nonlinearity is None:
-            self.nonlin = None
-        else:
-            self.nonlin = bl.act_func()[nonlinearity]
         
         self.nonlin = PiecewiseLinearExpNonlinearity(1, bias=em_bias, vmin=0, vmax=vmax, num_bins=num_bins, smooth_reg_weight=smooth_reg_weight, smoothnes_reg_order=smoothness_reg_order)
 
         # initializing the parameters
         if exact_init:
-            if scale_init is not None:
-                self.scale = torch.nn.Parameter(torch.ones(1) * scale_init)
-            else:
-                self.scale = torch.nn.Parameter(torch.rand(1))
-
-            if bias_init is not None:
-                self.bias = torch.nn.Parameter(torch.ones(1) * bias_init)
-            else:
-                self.bias = torch.nn.Parameter(torch.rand(1))
-            
             if sigma_x_init is not None and sigma_y_init is not None:
                 self.sigma_x = torch.nn.Parameter(torch.ones(1) * sigma_x_init)
                 self.sigma_y = torch.nn.Parameter(torch.ones(1) * sigma_y_init)
@@ -135,16 +117,6 @@ class EnergyModel(pl.LightningModule):
                 self.f = torch.nn.Parameter(torch.rand(1) + min_init_f_value)
             
         else:
-            if scale_init is not None:
-                self.scale = torch.nn.Parameter(torch.FloatTensor(1).uniform_(scale_init - 0.05, scale_init + 0.05))
-            else:
-                self.scale = torch.nn.Parameter(torch.rand(1))
-
-            if bias_init is not None:
-                self.bias = torch.nn.Parameter(torch.FloatTensor(1).uniform_(bias_init - 0.05, bias_init + 0.05))
-            else:
-                self.bias = torch.nn.Parameter(torch.rand(1))
-            
             if sigma_x_init is not None and sigma_y_init is not None:
                 self.sigma_x = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_x_init - 0.05, sigma_x_init + 0.05))
                 self.sigma_y = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_y_init - 0.05, sigma_y_init + 0.05))
@@ -216,7 +188,7 @@ class EnergyModel(pl.LightningModule):
 
         # we shift the orientations by the default shift
         shifted_orientation = torch.remainder(
-            self.orientations + self.default_ori_shift, np.pi ##################################################################################### 2*np.pi
+            self.orientations + self.default_ori_shift, np.pi
         )
 
         meshgrid_x_rotated = None
@@ -350,35 +322,12 @@ class EnergyModel(pl.LightningModule):
         )
 
         # response of each neuron to each image in a batch .. therefore shape of [batch_size, num_neurons]
-        # we scale the response by self.scale and add bias self.bias
-        
-        energy_model_response = None
-        
-        # if self.nonlin is None:
-        # energy_model_response = self.scale * torch.sqrt(
-        #     torch.square(filtered_image_odd) + torch.square(filtered_image_even)
-        # )# + self.bias
-
         input_to_nonlin = torch.square(filtered_image_odd) + torch.square(filtered_image_even)
         input_reshaped = input_to_nonlin.view(-1, 1)
-
-
-        energy_model_response = self.nonlin(input_reshaped)
-
-        energy_model_response = energy_model_response.view(input_to_nonlin.shape)
-
-
-        # else:
-        #     energy_model_response = self.scale * self.nonlin(
-        #         torch.square(filtered_image_odd) + torch.square(filtered_image_even)
-        #     ) + self.bias
+        energy_model_response = self.nonlin(input_reshaped).view(input_to_nonlin.shape)
 
         # as the response has to be non-negative, we clamp the values
-        # print("uz neklampuje _____")
         energy_model_response_clamped = torch.clamp(energy_model_response, min=self.response_clamp_minimum)
-        # return energy_model_response
-        # print(energy_model_response_clamped[0][0])
-
         return energy_model_response_clamped
     
     def configure_optimizers(self):
@@ -402,35 +351,16 @@ class EnergyModel(pl.LightningModule):
         self.log("val/sigma_x", self.sigma_x)
         self.log("val/sigma_y", self.sigma_y)
         self.log("val/f", self.f)
-        self.log("val/scale", self.scale)
-        self.log("val/bias", self.bias)
         return loss
 
     def validation_step(self, batch, batch_idx):
         img, resp = batch
         prediction = self.forward(img)
-        # print("pred")
-        # print(prediction[0,0])
-        # print("resp")
-        # print(resp[0,0])
         loss = self.loss(prediction, resp)
-        # print("loss")
-        # print(loss)
         self.log("val/loss", loss)
         self.log("val/sigma_x", self.sigma_x)
         self.log("val/sigma_y", self.sigma_y)
         self.log("val/f", self.f)
-        self.log("val/scale", self.scale)
-        self.log("val/bias", self.bias)
-        # print("----------------")
-        # print(resp.mean())
-        # print(resp.std())
-        # print(resp.max())
-        # print(resp.min())
-        # print(prediction.mean())
-        # print(prediction.std())
-        # print(prediction.max())
-        # print(prediction.min())
 
         return prediction, resp
 
@@ -605,19 +535,6 @@ class EnergyModel(pl.LightningModule):
             plt.plot(sorted)
             plt.title("distribution of maximal values of positions in gabor filters")
             plt.show()
-            # ten_percent = sorted[sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[2*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[3*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[4*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[5*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[sorted.shape[0]//10]
-
-            # print(ten_percent)
             gabor = (tmp > (maximum/1000)) * 1
             
 
@@ -830,19 +747,6 @@ class EnergyModelIndividual(pl.LightningModule):
         self.register_buffer("meshgrid_x_rotated", meshgrid_x_rotated)
         self.register_buffer("meshgrid_y_rotated", meshgrid_y_rotated)
 
-    # def on_after_backward(self):
-    #     print("on_after_backward----------------------------")
-    #     print("on_after_backward----------------------------")
-    #     print("on_after_backward----------------------------")
-    #     print("on_after_backward----------------------------")
-    #     # global_step = self.global_step
-    #     for name, param in self.named_parameters():
-    #         if param.requires_grad:
-    #             print(name)
-    #             print(torch.isnan(param.grad).any())
-    #             print(torch.isinf(param.grad).any())
-    #             print(param.grad.max())
-
     def forward(self, x):
 
         # because sometimes the input is analogous to RGB, which has 3 channels,
@@ -968,9 +872,6 @@ class EnergyModelIndividual(pl.LightningModule):
             torch.square(filtered_image_odd) + torch.square(filtered_image_even)
         ) + self.bias[None, :]
 
-        
-
-
         # as the response has to be non-negative, we clamp the values
         energy_model_response_clamped = torch.clamp(energy_model_response, min=self.response_clamp_minimum)
 
@@ -988,30 +889,9 @@ class EnergyModelIndividual(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         img, resp = batch
         prediction = self.forward(img)
-        # print(torch.isnan(prediction).any())
         assert (prediction > 0).all()
         loss = self.loss(prediction, resp)
-        # print('loss: ----------------------------------')
-        # print(torch.isnan(loss).any())
-        # print(torch.log(prediction + 1e-12).max())
-        # print(torch.log(prediction + 1e-12).min())
-        # print(torch.log(prediction + 1e-12).min())
-        # # print(loss.max())
-        # print(torch.isinf(torch.log(prediction + 1e-12)).any())
-        # print(torch.isnan(torch.log(prediction + 1e-12)).any())
-        # print(torch.isinf(loss).any())
-
-        # print("kde je to posranyyyyyyyyyyyyyy")
-        # print(prediction[torch.isnan(loss)])
-        # print(resp[torch.isnan(loss)])
-
         self.log("train/loss", loss)
-        # self.log("val/loss", loss)
-        # self.log("val/sigma_x", self.sigma_x)
-        # self.log("val/sigma_y", self.sigma_y)
-        # self.log("val/f", self.f)
-        # self.log("val/scale", self.scale)
-        # self.log("val/bias", self.bias)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -1019,11 +899,6 @@ class EnergyModelIndividual(pl.LightningModule):
         prediction = self.forward(img)
         loss = self.loss(prediction, resp)
         self.log("val/loss", loss)
-        # self.log("val/sigma_x", self.sigma_x)
-        # self.log("val/sigma_y", self.sigma_y)
-        # self.log("val/f", self.f)
-        # self.log("val/scale", self.scale)
-        # self.log("val/bias", self.bias)
 
         return prediction, resp
 
@@ -1202,19 +1077,6 @@ class EnergyModelIndividual(pl.LightningModule):
             plt.plot(sorted)
             plt.title("distribution of maximal values of positions in gabor filters")
             plt.show()
-            # ten_percent = sorted[sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[2*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[3*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[4*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[5*sorted.shape[0]//10]
-            # print(ten_percent)
-            # ten_percent = sorted[sorted.shape[0]//10]
-
-            # print(ten_percent)
             gabor = (tmp > (maximum/1000)) * 1
             
 
@@ -1444,407 +1306,6 @@ class EnergyModelLearnableShift(pl.LightningModule):
         self.log("val/loss", loss)
         self.log("val/corr", corr)
         self.log("ori_shift", self.ori_shift)
-
-    def test_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("test/loss", loss)
-        self.log("test/corr", corr)
-
-
-### NO LEARNABLE ORIENTATION SHIFT
-
-
-class EnergyModelNoShift(pl.LightningModule):
-    def __init__(self, config, positions_x, positions_y, orientations, res, xlim, ylim):
-        """
-
-        Args:
-            config (_type_): _description_
-            positions_x (_type_): _description_
-            positions_y (_type_): _description_
-            orientations (_type_): in radians (0, np.pi)
-            res (_type_): _description_
-            xlim (_type_): _description_
-            ylim (_type_): _description_
-        """
-        super().__init__()
-
-        self.config = config
-        self.loss = PoissonLoss()
-        self.corr = Corr()
-        self.num_neurons = len(orientations)  # number of neurons
-
-        self.scale = torch.nn.Parameter(torch.ones(1))
-        self.bias = torch.nn.Parameter(torch.rand(1))
-        self.sigma_x = torch.nn.Parameter(torch.ones(1))
-        self.sigma_y = torch.nn.Parameter(torch.ones(1))
-        self.f = torch.nn.Parameter(torch.ones(1))
-
-        self.register_buffer(
-            "positions_x", torch.from_numpy(positions_x.astype("float32"))
-        )
-        self.register_buffer(
-            "positions_y", torch.from_numpy(positions_y.astype("float32"))
-        )
-
-        self.orientations = orientations.astype(
-            "float32"
-        )  # we don't create a tensor, we won't use them (we will use only positions)
-
-        self.init_gabor_filters(res, xlim, ylim)
-
-    def init_gabor_filters(self, res, xlim, ylim):
-        """Creates a tensor (not trainable) of meshgrids of gabor filters
-           with proper rotations.
-           It registers it in the buffer (so that it can be moved to GPU easily).
-           Gabors are of two types: even and odd -> therefore there are two types of all variables
-
-           The tensors created are of shape [num_of_neurons, meshgrid_dimension]
-             An example tensor (one of four created):
-             - gabors_odd_meshgrid_X -> tensor of odd gabor filters with meshgrid for X axis
-
-        Args:
-            res (_type_): _description_
-            xlim (_type_): _description_
-            ylim (_type_): _description_
-        """
-        x = np.linspace(xlim[0], xlim[1], res[0])
-        y = np.linspace(ylim[0], ylim[1], res[1])
-        X, Y = np.meshgrid(x, y)
-
-        # connecting two tuples to get shape: (self.num_neurons, X.shape[0], X.shape[1])
-        filters_shape_x = (self.num_neurons,) + X.shape
-        filters_shape_y = (self.num_neurons,) + Y.shape
-
-        gabors_odd_meshgrid_X = np.zeros(filters_shape_x)
-        gabors_odd_meshgrid_Y = np.zeros(filters_shape_y)
-        gabors_even_meshgrid_X = np.zeros(filters_shape_x)
-        gabors_even_meshgrid_Y = np.zeros(filters_shape_y)
-
-        for i in range(self.num_neurons):
-
-            orientation = self.orientations[i]
-
-            x = np.linspace(xlim[0], xlim[1], res[0])
-            y = np.linspace(ylim[0], ylim[1], res[1])
-            X, Y = np.meshgrid(x, y)
-
-            X_rot = X * np.cos(orientation) + Y * np.sin(orientation)
-            Y_rot = -X * np.sin(orientation) + Y * np.cos(orientation)
-
-            gabors_odd_meshgrid_X[i, :, :] = X_rot
-            gabors_odd_meshgrid_Y[i, :, :] = Y_rot
-            gabors_even_meshgrid_X[i, :, :] = X_rot
-            gabors_even_meshgrid_Y[i, :, :] = Y_rot
-
-        self.register_buffer(
-            "gabors_odd_x", torch.from_numpy(gabors_odd_meshgrid_X.astype("float32"))
-        )
-        self.register_buffer(
-            "gabors_odd_y", torch.from_numpy(gabors_odd_meshgrid_Y.astype("float32"))
-        )
-        self.register_buffer(
-            "gabors_even_x", torch.from_numpy(gabors_even_meshgrid_X.astype("float32"))
-        )
-        self.register_buffer(
-            "gabors_even_y", torch.from_numpy(gabors_even_meshgrid_Y.astype("float32"))
-        )
-
-    def forward(self, x):
-
-        if x.shape[1] == 1:
-            x = torch.squeeze(x, 1)
-
-        A = torch.exp(
-            -0.5
-            * (
-                # copy positions (vector) to each position. It is aligned with the 0th axis... [i, :, :] are same numbers (copied)
-                (
-                    torch.square(self.gabors_odd_x + self.positions_x[:, None, None])
-                    / torch.square(self.sigma_x)
-                )
-                + (
-                    torch.square(self.gabors_odd_y + self.positions_y[:, None, None])
-                    / torch.square(self.sigma_y)
-                )
-            )
-        )
-
-        B = torch.cos(
-            2 * np.pi * (self.gabors_odd_x + self.positions_x[:, None, None]) * self.f
-            + 0
-        )  # phase = 0
-        odd_gabor_filter = A * B
-
-        A = torch.exp(
-            -0.5
-            * (
-                # copy positions (vector) to each position. It is aligned with the 0th axis... [i, :, :] are same numbers (copied)
-                (
-                    torch.square(self.gabors_even_x + self.positions_x[:, None, None])
-                    / torch.square(self.sigma_x)
-                )
-                + (
-                    torch.square(self.gabors_even_y + self.positions_y[:, None, None])
-                    / torch.square(self.sigma_y)
-                )
-            )
-        )
-
-        B = torch.cos(
-            2 * np.pi * (self.gabors_even_x + self.positions_x[:, None, None]) * self.f
-            + (np.pi / 2)
-        )  # phase = 90deg = np.pi/2
-        even_gabor_filter = A * B  # shape [num_neurons, x_pixels, y_pixels]
-
-        # because x is [batch_size, x_pixels, y_pixels] and gabor_filter is [num_neurons, x_pixels, y_pixels],
-        # we do the tensordot in the corresponding dimensions matching x_pixels and y_pixels
-        # it returns a tensor of shape [batch_size, num_neurons].. so there is a response of each filter
-        # for each image in the batch
-        filtered_image_odd = torch.tensordot(x, odd_gabor_filter, dims=[[1, 2], [1, 2]])
-        filtered_image_even = torch.tensordot(
-            x, even_gabor_filter, dims=[[1, 2], [1, 2]]
-        )
-
-        # should be of shape [batch_size, num_neurons] ... response of each neuron to each image in a batch
-        energy_model_response = (
-            self.scale
-            * torch.sqrt(
-                torch.square(filtered_image_odd) + torch.square(filtered_image_even)
-            )
-            + self.bias
-        )
-        # energy_model_response = torch.sqrt(torch.square(filtered_image_odd) + torch.square(filtered_image_even))
-
-        energy_model_response_clamped = torch.clamp(energy_model_response, min=0)
-
-        return energy_model_response_clamped
-
-    def configure_optimizers(self):
-        """Configures the optimizer for the training of the model (Adam).
-
-        Returns:
-            torch.optimizer: torch optimizer class
-        """
-        opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
-        return opt
-
-    def training_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        self.log("train/loss", loss)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("val/loss", loss)
-        self.log("val/corr", corr)
-
-    def test_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("test/loss", loss)
-        self.log("test/corr", corr)
-
-
-### EXTREMELY SLOW
-
-
-class GaborFilterTorch(pl.LightningModule):
-    def __init__(
-        self, config, pos_x, pos_y, theta, sigma_x, sigma_y, sf, phase, res, xlim, ylim
-    ):
-        super().__init__()
-        self.config = config
-
-        self.loss = PoissonLoss()
-        self.corr = Corr()
-
-        # orientations and positions based on ground truth
-        self.orientation = theta
-        # self.pos_x = torch.from_numpy(pos_x).as_type(sigma_x)
-        # self.pos_y = torch.from_numpy(pos_y).as_type(sigma_x)
-        self.pos_x = pos_x.astype("float32")
-        self.pos_y = pos_y.astype("float32")
-        # self.register_buffer("pos_x", pos_x)
-        # self.register_buffer("pos_y", pos_y)
-
-        # learnable parameters shared between all Gabor Filters
-        self.sigma_x = sigma_x
-        self.sigma_y = sigma_y
-        self.sf = sf
-
-        # either 0 or np.pi/2
-        self.phase = phase
-
-        x = np.linspace(xlim[0], xlim[1], res[0])
-        y = np.linspace(ylim[0], ylim[1], res[1])
-        X, Y = np.meshgrid(x, y)
-
-        # X = Parameter(torch.from_numpy(X), requires_grad=False)
-        # Y = Parameter(torch.from_numpy(Y), requires_grad=False)
-        # X = torch.from_numpy(X).type_as(self.sigma_x)
-        # Y = torch.from_numpy(Y).type_as(self.sigma_x)
-
-        # clockwise rotation
-        # self.X_rot = X * np.cos(self.orientation) + Y * np.sin(self.orientation)
-        # self.Y_rot = -X * np.sin(self.orientation) + Y * np.cos(self.orientation)
-        X_rot = X * np.cos(self.orientation) + Y * np.sin(self.orientation)
-        Y_rot = -X * np.sin(self.orientation) + Y * np.cos(self.orientation)
-
-        self.register_buffer("X_rot", torch.from_numpy(X_rot.astype("float32")))
-        self.register_buffer("Y_rot", torch.from_numpy(Y_rot.astype("float32")))
-
-    def forward(self, x):
-        """Returns the response of the Gabor Filter
-
-        Args:
-            x (torch.tensor): input image
-
-        Returns:
-            torch.float: response of the Gabor Filter
-        """
-
-        A = torch.exp(
-            -0.5
-            * (
-                (torch.square(self.X_rot + self.pos_x) / torch.square(self.sigma_x))
-                + (torch.square(self.Y_rot + self.pos_y) / torch.square(self.sigma_y))
-            )
-        )
-
-        B = torch.cos(2 * np.pi * (self.X_rot + self.pos_x) * self.sf + self.phase)
-        filter = A * B
-
-        return torch.tensordot(x, filter)
-
-    def configure_optimizers(self):
-        """Configures the optimizer for the training of the model (Adam).
-
-        Returns:
-            torch.optimizer: torch optimizer class
-        """
-        opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
-        return opt
-
-    def training_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("val/loss", loss)
-        self.log("val/corr", corr)
-
-    def test_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("test/loss", loss)
-        self.log("test/corr", corr)
-
-
-class EnergyModelSlow(pl.LightningModule):
-    def __init__(self, config, positions_x, positions_y, orientations, res, xlim, ylim):
-        super().__init__()
-
-        self.config = config
-        self.loss = PoissonLoss()
-        self.corr = Corr()
-        self.num_neurons = len(orientations)
-
-        self.scale = torch.nn.Parameter(torch.ones(1))
-        self.bias = torch.nn.Parameter(torch.zeros(1))
-        self.sigma_x = torch.nn.Parameter(torch.zeros(1))
-        self.sigma_y = torch.nn.Parameter(torch.zeros(1))
-        self.f = torch.nn.Parameter(torch.zeros(1))
-
-        self.neurons_even = torch.nn.ModuleList(
-            [
-                GaborFilterTorch(
-                    self.config,
-                    positions_x[i],
-                    positions_y[i],
-                    orientations[i],
-                    self.sigma_x,
-                    self.sigma_y,
-                    self.f,
-                    0,
-                    res,
-                    xlim,
-                    ylim,
-                )
-                for i in range(self.num_neurons)
-            ]
-        )
-        self.neurons_odd = torch.nn.ModuleList(
-            [
-                GaborFilterTorch(
-                    self.config,
-                    positions_x[i],
-                    positions_y[i],
-                    orientations[i],
-                    self.sigma_x,
-                    self.sigma_y,
-                    self.f,
-                    np.pi / 2,
-                    res,
-                    xlim,
-                    ylim,
-                )
-                for i in range(self.num_neurons)
-            ]
-        )
-
-    def forward(self, x):
-        responses = torch.zeros(
-            (x.shape[0], self.num_neurons), device=self.device
-        )  # (batch_size, num_of_neurons)
-        for i in range(self.num_neurons):
-            x1 = self.neurons_even[i](x)
-            x2 = self.neurons_odd[i](x)
-
-            y = self.scale * torch.sqrt(torch.square(x1) + torch.square(x2)) + self.bias
-            responses[:, i] = y.squeeze()
-        return responses
-
-    def configure_optimizers(self):
-        """Configures the optimizer for the training of the model (Adam).
-
-        Returns:
-            torch.optimizer: torch optimizer class
-        """
-        opt = torch.optim.Adam(self.parameters(), lr=self.config["lr"])
-        return opt
-
-    def training_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        img, resp = batch
-        prediction = self.forward(img)
-        loss = self.loss(prediction, resp)
-        corr = self.corr(prediction, resp)
-        self.log("val/loss", loss)
-        self.log("val/corr", corr)
 
     def test_step(self, batch, batch_idx):
         img, resp = batch
