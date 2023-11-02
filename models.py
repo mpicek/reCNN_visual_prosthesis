@@ -224,407 +224,9 @@ class ExtendedEncodingModel(encoding_model):
         self.log("val/corr", np.mean(correlation))
 
 
-class reCNN_FullFactorized(ExtendedEncodingModel):
-    """Rotation-equivariant CNN with a Full factorized readout.
+class reCNN_bottleneck_CyclicGauss3d_individual_neuron_scaling(ExtendedEncodingModel):
     """
-
-    def __init__(self, **config):
-        super().__init__(**config)
-        self.config = config
-        self.loss = PoissonLoss(avg=True)
-        self.corr = Corr()
-        self.nonlinearity = self.config["nonlinearity"]
-
-        self.core = cores.RotationEquivariant2dCore(
-            num_rotations=self.config["num_rotations"],
-            stride=self.config["stride"],
-            upsampling=self.config["upsampling"],
-            rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-            input_regularizer=self.config["input_regularizer"],
-            input_channels=self.config["input_channels"],
-            hidden_channels=self.config["core_hidden_channels"],
-            input_kern=self.config["core_input_kern"],
-            hidden_kern=self.config["core_hidden_kern"],
-            layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],
-            gamma_hidden=config["core_gamma_hidden"],
-            stack=config["stack"],
-            depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
-        )
-
-        self.readout = readouts.FullFactorized2d(
-            in_shape=(
-                self.config["core_hidden_channels"]
-                * self.config["num_rotations"]
-                * abs(self.config["stack"]),
-                self.config[
-                    "input_size_x"
-                ],  # ocividne se to padduje, takze to neztraci rozmery
-                self.config["input_size_y"],
-            ),
-            outdims=self.config["num_neurons"],
-            bias=self.config["readout_bias"],
-            mean_activity=self.config["mean_activity"],
-            spatial_and_feature_reg_weight=self.config["readout_gamma"],
-        )
-
-        self.register_buffer("laplace", torch.from_numpy(laplace()))
-        self.nonlin = bl.act_func()[config["nonlinearity"]]
-
-    def forward(self, x):
-        x = self.core(x)
-        x = self.nonlin(self.readout(x))
-        return x
-
-    def __str__(self):
-        return "reCNN_FullFactorized2d"
-
-    def reg_readout_spatial_smoothness(self):
-        nw = self.readout.normalized_spatial()
-        reg_term = torch.sqrt(
-            torch.sum(
-                torch.pow(
-                    nn.functional.conv2d(
-                        nw.reshape(
-                            self.config["num_neurons"],
-                            1,
-                            self.config["input_size_x"],
-                            self.config["input_size_y"],
-                        ),
-                        self.laplace,
-                        padding="same",
-                    ),
-                    2,
-                )
-            )
-        )
-        reg_term = self.config["reg_readout_spatial_smoothness"] * reg_term
-        return reg_term
-
-    def reg_readout_group_sparsity(self):
-        nw = self.readout.normalized_spatial().reshape(self.config["num_neurons"], -1)
-        reg_term = self.config["reg_group_sparsity"] * torch.sum(
-            torch.sqrt(torch.sum(torch.pow(nw, 2), dim=-1)), 0
-        )
-        return reg_term
-
-    def reg_readout_spatial_sparsity(self):
-        nw = self.readout.normalized_spatial()
-        reg_term = self.config["reg_spatial_sparsity"] * torch.abs(nw).mean()
-        self.log("reg/readout_spatial_sparsity", reg_term)
-        return reg_term
-
-    def regularization(self):
-
-        readout_l1_reg = self.readout.regularizer(reduction="mean")
-        self.log("reg/readout_l1_reg", readout_l1_reg)
-        spatial_smoothness = self.reg_readout_spatial_smoothness()
-        group_sparsity = self.reg_readout_group_sparsity()
-        spatial_sparsity = self.reg_readout_spatial_sparsity()
-        self.log("reg/readout_spatial_smoothness", spatial_smoothness)
-        self.log("reg/readout_group_sparsity", group_sparsity)
-        self.log("reg/readout_spatial_sparsity", spatial_sparsity)
-
-        readout_reg = (
-            readout_l1_reg + spatial_smoothness + group_sparsity + spatial_sparsity
-        )
-        core_reg = self.core.regularizer()
-        reg_term = readout_reg + core_reg
-        self.log("reg/core reg", core_reg)
-        self.log("reg/readout_reg", readout_reg)
-        return reg_term
-
-
-class reCNN_Gauss2D(ExtendedEncodingModel):
-    """Rotation-equivariant CNN with a 2d Gaussian readout.
-    """
-    def __init__(self, **config):
-        super().__init__(**config)
-        self.config = config
-        self.loss = PoissonLoss(avg=True)
-        self.corr = Corr()
-        self.nonlinearity = self.config["nonlinearity"]
-
-        self.core = RotationEquivariant2dCore(
-            num_rotations=self.config["num_rotations"],
-            stride=self.config["stride"],
-            upsampling=self.config["upsampling"],
-            rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-            input_regularizer=self.config["input_regularizer"],
-            input_channels=self.config["input_channels"],
-            hidden_channels=self.config["core_hidden_channels"],
-            input_kern=self.config["core_input_kern"],
-            hidden_kern=self.config["core_hidden_kern"],
-            layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],
-            gamma_hidden=config["core_gamma_hidden"],
-            stack=config["stack"],
-            depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
-        )
-
-        self.readout = readouts.FullGaussian2d(
-            in_shape=(
-                self.config["core_hidden_channels"]
-                * self.config["num_rotations"]
-                * abs(self.config["stack"]),
-                self.config["input_size_x"],
-                self.config["input_size_y"],
-            ),
-            outdims=self.config["num_neurons"],
-            bias=self.config["readout_bias"],
-            mean_activity=self.config["mean_activity"],
-            feature_reg_weight=self.config["readout_gamma"],
-        )
-
-        self.register_buffer("laplace", torch.from_numpy(laplace()))
-        self.nonlin = bl.act_func()[config["nonlinearity"]]
-
-    def forward(self, x):
-        x = self.core(x)
-        x = self.nonlin(self.readout(x))
-        return x
-
-    def __str__(self):
-        return "reCNN_FullGaussian2d"
-
-    def regularization(self):
-
-        readout_l1_reg = self.readout.regularizer(reduction="mean")
-        self.log("reg/readout_l1_reg", readout_l1_reg)
-        readout_reg = readout_l1_reg
-        core_reg = self.core.regularizer()
-        reg_term = readout_reg + core_reg
-        self.log("reg/core reg", core_reg)
-        self.log("reg/readout_reg", readout_reg)
-        return reg_term
-
-
-class reCNN_bottleneck_Gauss2d(ExtendedEncodingModel):
-    """
-    DNN network composed of reCNN core, bottleneck at the end,
-    and also a FullGaussian2d readout
-    """
-
-    def __init__(self, **config):
-        super().__init__(**config)
-        self.config = config
-        self.nonlinearity = self.config["nonlinearity"]
-
-        self.hidden_padding = None
-        assert self.config["stack"] == -1
-
-        self.core = RotationEquivariant2dCoreBottleneck(
-            num_rotations=self.config["num_rotations"],
-            stride=self.config["stride"],
-            upsampling=self.config["upsampling"],
-            rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-            input_regularizer=self.config["input_regularizer"],
-            input_channels=self.config["input_channels"],
-            hidden_channels=self.config["core_hidden_channels"],
-            input_kern=self.config["core_input_kern"],
-            hidden_kern=self.config["core_hidden_kern"],
-            layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],
-            gamma_hidden=config["core_gamma_hidden"],
-            stack=config["stack"],
-            depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
-            bottleneck_kernel=config["bottleneck_kernel"],
-        )
-
-        self.readout = readouts.FullGaussian2d(
-            in_shape=(
-                self.config["num_rotations"],
-                self.config["input_size_x"],
-                self.config["input_size_y"],
-            ),
-            outdims=self.config["num_neurons"],
-            bias=self.config["readout_bias"],
-            mean_activity=self.config["mean_activity"],
-            feature_reg_weight=self.config["readout_gamma"],
-        )
-
-        self.register_buffer("laplace", torch.from_numpy(laplace()))
-        self.nonlin = bl.act_func()[config["nonlinearity"]]
-
-    def forward(self, x):
-        x = self.core(x)
-        x = self.nonlin(self.readout(x))
-        return x
-
-    def __str__(self):
-        return "reCNN_bottleneck_Gauss2d"
-
-    def add_bottleneck(self):
-
-        layer = OrderedDict()
-
-        if self.hidden_padding is None:
-            self.hidden_padding = self.bottleneck_kernel // 2
-
-        layer["hermite_conv"] = HermiteConv2D(
-            input_features=self.config["hidden_channels"]
-            * self.config["num_rotations"],
-            output_features=1,
-            num_rotations=self.config["num_rotations"],
-            upsampling=self.config["upsampling"],
-            filter_size=self.config["bottleneck_kernel"],
-            stride=self.config["stride"],
-            padding=self.hidden_padding,
-            first_layer=False,
-        )
-        super().add_bn_layer(layer)
-        super().add_activation(layer)
-        super().features.add_module("bottleneck", nn.Sequential(layer))
-
-    def regularization(self):
-
-        readout_l1_reg = self.readout.regularizer(reduction="mean")
-        self.log("reg/readout_l1_reg", readout_l1_reg)
-
-        readout_reg = readout_l1_reg
-
-        core_reg = self.core.regularizer()
-        reg_term = readout_reg + core_reg
-        self.log("reg/core reg", core_reg)
-        self.log("reg/readout_reg", readout_reg)
-        return reg_term
-
-
-class reCNN_bottleneck_NoReadout(ExtendedEncodingModel):
-    """
-    Lurz's model with RotEq core and with bottleneck
-    No Readout is present here. It is used to test that the features are
-        really rotation equivariant (in bottleneck_test.py)
-    """
-
-    def __init__(self, **config):
-        super().__init__(**config)
-        self.config = config
-        self.nonlinearity = self.config["nonlinearity"]
-
-        self.hidden_padding = None
-        assert self.config["stack"] == -1
-
-        self.core = RotationEquivariant2dCoreBottleneck(
-            num_rotations=self.config["num_rotations"],
-            stride=self.config["stride"],
-            upsampling=self.config["upsampling"],
-            rot_eq_batch_norm=self.config["rot_eq_batch_norm"],
-            input_regularizer=self.config["input_regularizer"],
-            input_channels=self.config["input_channels"],
-            hidden_channels=self.config["core_hidden_channels"],
-            input_kern=self.config["core_input_kern"],
-            hidden_kern=self.config["core_hidden_kern"],
-            layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],
-            gamma_hidden=config["core_gamma_hidden"],
-            stack=config["stack"],
-            depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
-            bottleneck_kernel=config["bottleneck_kernel"],
-        )
-
-        self.register_buffer("laplace", torch.from_numpy(laplace()))
-        self.nonlin = bl.act_func()[config["nonlinearity"]]
-
-    def forward(self, x):
-        x = self.core(x)
-        return x
-
-    def __str__(self):
-        return "reCNN_bottleneck_NoReadout"
-
-    def regularization(self):
-
-        readout_reg = 0
-        core_reg = self.core.regularizer()
-        reg_term = readout_reg + core_reg
-        self.log("reg/core reg", core_reg)
-        return reg_term
-
-
-class LurzReimplementation(ExtendedEncodingModel):
-    """Reimplementation of the original Lurz's model."""
-
-    def __init__(self, **config):
-        super().__init__(**config)
-        self.config = config
-        self.loss = PoissonLoss(avg=True)
-        self.corr = Corr()
-        self.nonlinearity = self.config["nonlinearity"]
-
-        self.core = cores.SE2dCore(
-            stride=self.config["stride"],
-            input_regularizer=self.config["input_regularizer"],
-            input_channels=self.config["input_channels"],
-            hidden_channels=self.config["core_hidden_channels"],
-            input_kern=self.config["core_input_kern"],
-            hidden_kern=self.config["core_hidden_kern"],
-            layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"],  # 0
-            gamma_hidden=config["core_gamma_hidden"],  # 0
-            stack=config["stack"],
-            depth_separable=config["depth_separable"],
-            use_avg_reg=config["use_avg_reg"],
-        )
-
-        self.readout = readouts.FullGaussian2d(
-            in_shape=(
-                self.config["core_hidden_channels"] * abs(self.config["stack"]),
-                self.config["input_size_x"],
-                self.config["input_size_y"],
-            ),
-            outdims=self.config["num_neurons"],
-            bias=self.config["readout_bias"],
-            mean_activity=self.config["mean_activity"],
-            feature_reg_weight=self.config["readout_gamma"],
-        )
-
-        self.register_buffer("laplace", torch.from_numpy(laplace()))
-        self.nonlin = bl.act_func()[config["nonlinearity"]]
-
-    def forward(self, x):
-        x = self.core(x)
-        x = self.nonlin(self.readout(x))
-        return x
-
-    def __str__(self):
-        return "StackedCore_FullGaussian2d"
-
-    def reg_readout_group_sparsity(self):
-        nw = self.readout.features.reshape(self.config["num_neurons"], -1)
-        reg_term = self.config["reg_group_sparsity"] * torch.sum(
-            torch.sqrt(torch.sum(torch.pow(nw, 2), dim=-1)), 0
-        )
-        return reg_term
-
-    def regularization(self):
-
-        readout_l1_reg = self.readout.regularizer(reduction="mean")
-        self.log("reg/readout_l1_reg", readout_l1_reg)
-
-        readout_reg = readout_l1_reg
-        core_reg = self.core.regularizer()
-        reg_term = readout_reg + core_reg
-        self.log("reg/core reg", core_reg)
-        self.log("reg/readout_reg", readout_reg)
-        return reg_term
-
-
-class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
-    """
-        The main model of this repository.
-        This model consists of:
-            - a core with reCNN architecture with a bottleneck in the last layer
-              to return only one scalar value for each position and orientation
-              (meaning that the number of channels in the last layer is limited
-              to 1)
-            - a readout which is a Gaussian 3d readout but modified in a way
-              that ensures that the third dimension (= orientation dimension)
-              is periodic
+        Like the main model of this repository, but with individual neuron scaling in the readout.
     """
 
     def __init__(self, **config):
@@ -674,19 +276,12 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
         self.nonlin = bl.act_func()[config["nonlinearity"]]
 
     def forward(self, x):
-        self.log("train/sigma1", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma1b", self.readout.sigma[0, 0, 1, 0, 1])
-        self.log("train/sigma2", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma2b", self.readout.sigma[0, 0, 1, 0, 1])
-        self.log("train/sigma3", self.readout.sigma[0, 0, 0, 0, 1])
-        self.log("train/sigma3b", self.readout.sigma[0, 0, 1, 0, 1])
-        # print(self.readout.sigma.shape)
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
 
     def __str__(self):
-        return "reCNN_bottleneck_CyclicGauss3d"
+        return "reCNN_bottleneck_CyclicGauss3d_individual_neuron_scaling"
 
     def add_bottleneck(self):
 
@@ -727,7 +322,6 @@ class reCNN_bottleneck_CyclicGauss3d(ExtendedEncodingModel):
         
         fig, ax = plt.subplots()
         x, y, o = get_neuron_estimates(self, 5.5)
-        # x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path)
         reconstruct_orientation_maps(x, y, o, fig, ax, save, 12, 2.4, 2.4, img_path, suffix, neuron_dot_size)
 
 
@@ -745,12 +339,9 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
     """
 
     def __init__(self, **config):
-    # def __init__(self, dataloader=None, **config):
         """As this network can be initialized to the ground truth positions and orientations,
         we need a reference to the dataloader from which this ground truth will be provided.
 
-        Args:
-            dataloader (pl.LightningDataModule): Dataset dataloader with method get_ground_truth(pos_path, ori_path, in_degrees)
         """
         super().__init__(**config)
         self.config = config
@@ -800,7 +391,6 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
             orientation_shift=config["orientation_shift"], #in degrees
             factor = config["factor"],
             filtered_neurons = config["filtered_neurons"],
-            # dataloader = dataloader,
             positions_minus_x = config["positions_minus_x"],
             positions_minus_y = config["positions_minus_y"],
             do_not_sample = config["do_not_sample"],
@@ -813,12 +403,6 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
         self.readout.init_neurons(dataloader)
 
     def forward(self, x):
-        # self.log("train/sigma1", self.readout.sigma[0, 0, 0, 0, 1])
-        # self.log("train/sigma1b", self.readout.sigma[0, 0, 1, 0, 1])
-        # self.log("train/sigma2", self.readout.sigma[0, 0, 0, 0, 1])
-        # self.log("train/sigma2b", self.readout.sigma[0, 0, 1, 0, 1])
-        # self.log("train/sigma3", self.readout.sigma[0, 0, 0, 0, 1])
-        # self.log("train/sigma3b", self.readout.sigma[0, 0, 1, 0, 1])
         x = self.core(x)
         x = self.nonlin(self.readout(x))
         return x
@@ -894,10 +478,7 @@ class Lurz_Control_Model(ExtendedEncodingModel):
     def __init__(self, **config):
         super().__init__(**config)
         self.config = config
-        # self.loss = PoissonLoss(avg=True)
-        # self.corr = Corr()
         self.nonlinearity = self.config["nonlinearity"]
-        # self.dataloader = dataloader
         
 
         self.core = cores.SE2dCore(
@@ -908,8 +489,8 @@ class Lurz_Control_Model(ExtendedEncodingModel):
             input_kern=self.config["core_input_kern"],
             hidden_kern=self.config["core_hidden_kern"],
             layers=self.config["core_layers"],
-            gamma_input=config["core_gamma_input"], # 0
-            gamma_hidden=config["core_gamma_hidden"], # 0
+            gamma_input=config["core_gamma_input"],
+            gamma_hidden=config["core_gamma_hidden"],
             stack=config["stack"],
             depth_separable=config["depth_separable"],
             use_avg_reg=config["use_avg_reg"]
@@ -917,10 +498,9 @@ class Lurz_Control_Model(ExtendedEncodingModel):
 
         
         self.readout = readouts.FullGaussian2d(
-            in_shape=( #TODO: stack???
-                #TODO: ten shape si potvrdit
+            in_shape=(
                 self.config["core_hidden_channels"] * abs(self.config["stack"]),
-                self.config["input_size_x"], # ocividne se to padduje, takze to neztraci rozmery
+                self.config["input_size_x"],
                 self.config["input_size_y"],
             ),
             outdims=self.config["num_neurons"],
@@ -929,8 +509,6 @@ class Lurz_Control_Model(ExtendedEncodingModel):
             feature_reg_weight=self.config["readout_gamma"],
             init_sigma=self.config["init_sigma_range"],
         )
-
-        # print(self.readout.mu.data.shape) # torch.Size([1, 5000, 1, 2])
 
         self.init_to_ground_truth_positions = config["init_to_ground_truth_positions"]
         self.ground_truth_positions_file_path = config["ground_truth_positions_file_path"]
@@ -944,7 +522,6 @@ class Lurz_Control_Model(ExtendedEncodingModel):
         self.nonlin = bl.act_func()[config["nonlinearity"]]
 
 
-    # def init_readout_ground_truth(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, dataloader, config):
     def init_neurons(self, dataloader=None):
 
         if self.init_to_ground_truth_positions == True:
@@ -964,7 +541,6 @@ class Lurz_Control_Model(ExtendedEncodingModel):
     
     def __str__(self):
         return "StackedCore_FullGaussian2d"
-    
 
     def reg_readout_group_sparsity(self):
         nw = self.readout.features.reshape(self.config["num_neurons"], -1)

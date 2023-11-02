@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model_trainer import run_wandb_training, run_training_without_logging
-from models import reCNN_bottleneck_CyclicGauss3d_no_scaling, reCNN_bottleneck_CyclicGauss3d
+from models import reCNN_bottleneck_CyclicGauss3d_no_scaling
 from model_trainer import Antolik_dataset_preparation_function
 from utils import get_config
 import random
@@ -53,6 +53,10 @@ def main():
 
     config["train_data_dir"] = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/one_trials.pickle"
     config["test_data_dir"] = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/ten_trials.pickle"
+
+    # config['ground_truth_orientations_file_path'] = '../data/antolik/oris_reparametrized.pickle'
+    # config['ground_truth_positions_file_path'] = '../data/antolik/positions_reparametrized.pickle'
+
 
     model = run_wandb_training(
         config,

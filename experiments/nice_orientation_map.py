@@ -5,7 +5,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.resolve()))
 import wandb
 import glob
 import pytorch_lightning as pl
-from src.models import reCNN_bottleneck_CyclicGauss3d
+from src.models import reCNN_bottleneck_CyclicGauss3d_no_scaling
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -92,7 +92,7 @@ models_paths_list = glob.glob(artifact_dir + "/*.ckpt")
 m = None
 for path in models_paths_list:
 
-    m = reCNN_bottleneck_CyclicGauss3d.load_from_checkpoint(path)
+    m = reCNN_bottleneck_CyclicGauss3d_no_scaling.load_from_checkpoint(path)
     m.freeze()
 
     print(f"Model from {path} loaded!")
@@ -123,7 +123,7 @@ print(artifact_dir)
 models_paths_list = glob.glob(artifact_dir + "/*.ckpt")
 m = None
 for path in models_paths_list:
-    m = reCNN_bottleneck_CyclicGauss3d.load_from_checkpoint(path)
+    m = reCNN_bottleneck_CyclicGauss3d_no_scaling.load_from_checkpoint(path)
     m.freeze()
     print(f"Model from {path} loaded!")
 

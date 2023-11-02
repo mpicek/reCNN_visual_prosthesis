@@ -76,7 +76,7 @@ A folder with multiple configuration files that were used for wandb sweeps.
 [model_trainer.py](model_trainer.html) is a file with a purpose of preparing the datasets and 
 setting up a training of a given model with a connection to Wandb.
 
-[models.py](models.html) contains developed models including the most important one: `reCNN_bottleneck_CyclicGauss3d`
+[models.py](models.html) contains developed models including the most important one: `reCNN_bottleneck_CyclicGauss3d_no_scaling`
 
 [present_best_models.py](present_best_models.html) is a file that is supposed to run an evaluation on the best
 models and print the obtained results.

@@ -1,13 +1,12 @@
 import wandb
 from Lurz_dataset import LurzDataModule
 
-from models import reCNN_FullFactorized
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import ProgressBar
 import pytorch_lightning as pl
-from models import reCNN_bottleneck_CyclicGauss3d
+from models import reCNN_bottleneck_CyclicGauss3d_no_scaling
 from datetime import timedelta
 
 from pprint import pprint
@@ -77,7 +76,7 @@ def Antolik_dataset_preparation_function(config, load_data=True):
 def get_model(
     config,
     dm,
-    model_class=reCNN_FullFactorized,
+    model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling,
 ):
     """Sets up a model.
 
@@ -86,7 +85,7 @@ def get_model(
             - needs_ground_truth
             - model_needs_dataloader
         dm (pl.DataModule): The dataset
-        model_class (class, optional): Class of the model to be created. Defaults to reCNN_FullFactorized.
+        model_class (class, optional): Class of the model to be created. Defaults to reCNN_bottleneck_CyclicGauss3d_no_scaling.
 
     Returns:
         _type_: _description_
@@ -122,7 +121,7 @@ def run_wandb_training(
     entity,
     project,
     model_artifact_name=None,
-    model_class=reCNN_FullFactorized,
+    model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling,
     early_stopping_monitor="val/corr",
     early_stopping_mode="max",
     model_checkpoint_monitor="val/corr",
@@ -138,7 +137,7 @@ def run_wandb_training(
         entity (str): Name of the wandb user.
         project (str): Name of the wandb project
         model_artifact_name (str, optional): Name of the wandb artifact for the model. Defaults to None.
-        model_class (class, optional): A class of the model. Defaults to reCNN_FullFactorized.
+        model_class (class, optional): A class of the model. Defaults to reCNN_bottleneck_CyclicGauss3d_no_scaling.
         early_stopping_monitor (str, optional): A measure which is watched and based on which the early stopping of the training occurs. Defaults to "val/corr".
         early_stopping_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about the early stopping. Defaults to "max".
         model_checkpoint_monitor (str, optional): A measure which is watched and based on which the best model is decided. Defaults to "val/corr".
@@ -272,7 +271,7 @@ def run_wandb_training(
 def run_training_without_logging(
     config,
     dataset_preparation_function,
-    model_class=reCNN_FullFactorized,
+    model_class=reCNN_bottleneck_CyclicGauss3d_no_scaling,
     early_stopping_monitor="val/corr",
     early_stopping_mode="max",
 ):
@@ -286,7 +285,7 @@ def run_training_without_logging(
         entity (str): Name of the wandb user.
         project (str): Name of the wandb project
         model_artifact_name (str, optional): Name of the wandb artifact for the model. Defaults to None.
-        model_class (class, optional): A class of the model. Defaults to reCNN_FullFactorized.
+        model_class (class, optional): A class of the model. Defaults to reCNN_bottleneck_CyclicGauss3d_no_scaling.
         early_stopping_monitor (str, optional): A measure which is watched and based on which the early stopping of the training occurs. Defaults to "val/corr".
         early_stopping_mode (str, optional): Whether we want to reach maximum or minimum of the watched measure which decides about the early stopping. Defaults to "max".
         model_checkpoint_monitor (str, optional): A measure which is watched and based on which the best model is decided. Defaults to "val/corr".
