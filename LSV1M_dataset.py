@@ -30,9 +30,14 @@ class LSV1MDatasetSingleTrial(Dataset):
         self.path = path
         self.ground_truth_file = ground_truth_file
 
-        self.transform_list = transforms.Compose(
-            [transforms.Normalize((46.25135729356395,), (26.337162920481937,))]
+        self.input_transform_list = transforms.Compose(
+            [transforms.Normalize((46.1058,), (26.8956,))]
         )
+
+        self.input_mean = 46.1058
+        self.input_std = 26.8956
+        self.target_mean = 2.6297
+        self.target_std = 2.2849
 
         self.indices_representation = self.get_internal_indices_representation()
         self.indices = self.get_indices()
@@ -65,12 +70,12 @@ class LSV1MDatasetSingleTrial(Dataset):
             [loaded_files["V1_Exc_L23"], loaded_files["V1_Inh_L23"]]
         )
         
-
         data = torch.from_numpy(x)
         target = torch.from_numpy(y)
 
         if self.normalize:
-            data = self.transform_list(data)
+            data = self.input_transform_list(data)
+            target = (target - self.target_mean) / self.target_std
         
         return (data.float(), target.float())
     
@@ -173,7 +178,7 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
         """
         loaded_files = {}
 
-        index = self.indices[index]
+        index = self.indices_representation[index]
 
         # go one folder back from path and get from there the stimulus path
         stimulus_path = os.path.join(os.path.dirname(index), "stimulus.npy")
@@ -197,7 +202,7 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
         
         return (data.float(), target.float())
     
-    def get_indices(self):
+    def get_internal_indices_representation(self):
         """
         Indices of the dataset are not trivial (not integers from 0 to n).
         Each index is a complex string characterising the stimulus-response pair.
@@ -219,6 +224,9 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
             indices += whole_path_trials
         
         return indices
+    
+    def get_indices(self):
+        return np.arange(len(self.get_internal_indices_representation()))
 
 
 class LSV1MDataModule(pl.LightningDataModule):
@@ -338,10 +346,9 @@ class LSV1MDataModule(pl.LightningDataModule):
                 print("DONE")
 
         
-        # change the paths to the scratch directory path
-        self.train_data_dir = os.path.join(self.scratch_path, train_filename.split('.')[-2])
-        self.test_data_dir = os.path.join(self.scratch_path, test_filename.split('.')[-2])
-
+            # change the paths to the scratch directory path
+            self.train_data_dir = os.path.join(self.scratch_path, train_filename.split('.')[-2])
+            self.test_data_dir = os.path.join(self.scratch_path, test_filename.split('.')[-2])
 
     def setup(self, stage: Optional[str] = None):
         """Sets up the dataset, loads it, shuffles it and sets up the sampler.
