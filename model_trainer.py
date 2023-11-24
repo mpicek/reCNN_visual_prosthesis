@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from pprint import pprint
 from Antolik_dataset import AntolikDataModule
+from LSV1M_dataset import LSV1MDataModule
 
 
 def Antolik_dataset_preparation_function(config, load_data=True):
@@ -66,8 +67,61 @@ def Antolik_dataset_preparation_function(config, load_data=True):
                 "input_size_x": dm.get_input_shape()[1],
                 "input_size_y": dm.get_input_shape()[2],
                 "num_neurons": dm.get_output_shape()[0],
-                "mean_activity": dm.get_mean(),
                 "filtered_neurons":dm.get_filtered_neurons(),
+            }
+        )
+
+    return dm
+
+def LSV1M_dataset_preparation_function(config, load_data=True):
+    """Gets config, can edit it.
+        Uses only LSV1M in-silico dataset
+
+    Args:
+        config (dict): Configuration dictionary
+        run (wandb.run, optional): Wandb run for logging. If None, nothing is logged. Defaults to None.
+
+    Returns:
+        pl.DataModule: Pytorch Lightning DataModule of the dataset.
+    """
+    
+
+    if config["train_on_test"]:
+        dataset_config = {
+            "train_data_dir": config["test_data_dir"],
+            "test_data_dir": config["test_data_dir"],
+            "batch_size": config["batch_size"],
+            "normalize": config["normalize"],
+            "val_size": 500,
+            "ground_truth_file": config["ground_truth_file"],
+            "use_scratch": config["use_scratch"],
+        }
+    else:
+        dataset_config = {
+            "train_data_dir": config["train_data_dir"],
+            "test_data_dir": config["test_data_dir"],
+            "batch_size": config["batch_size"],
+            "normalize": config["normalize"],
+            "val_size": config["val_size"],
+            "ground_truth_file": config["ground_truth_file"],
+            "num_workers": config['num_workers'],
+            "use_scratch": config["use_scratch"],
+        }
+
+
+    dm = LSV1MDataModule(**dataset_config)
+
+    if load_data:
+        dm.prepare_data()
+        dm.setup()
+
+        # update config for initialization of model (<- certain config parameters depend on data)
+        config.update(
+            {
+                "input_channels": dm.get_input_shape()[0],
+                "input_size_x": dm.get_input_shape()[1],
+                "input_size_y": dm.get_input_shape()[2],
+                "num_neurons": dm.get_output_shape()[0],
             }
         )
 
@@ -94,8 +148,6 @@ def get_model(
     # Set up model
     if config["needs_ground_truth"]:
         pos_x, pos_y, orientations = dm.get_ground_truth(
-            ground_truth_positions_file_path=config["ground_truth_positions_file_path"], 
-            ground_truth_orientations_file_path=config["ground_truth_orientations_file_path"], 
             in_degrees=False, 
             positions_minus_y=config["positions_minus_y"], 
             positions_minus_x=config["positions_minus_x"], 
