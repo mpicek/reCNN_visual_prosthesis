@@ -95,6 +95,8 @@ def LSV1M_dataset_preparation_function(config, load_data=True):
             "val_size": 500,
             "ground_truth_file": config["ground_truth_file"],
             "use_scratch": config["use_scratch"],
+            "num_workers": config['num_workers'],
+            "average_test_trials": config["average_test_trials"],
         }
     else:
         dataset_config = {
@@ -106,6 +108,7 @@ def LSV1M_dataset_preparation_function(config, load_data=True):
             "ground_truth_file": config["ground_truth_file"],
             "num_workers": config['num_workers'],
             "use_scratch": config["use_scratch"],
+            "average_test_trials": config["average_test_trials"],
         }
 
 

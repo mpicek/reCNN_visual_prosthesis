@@ -149,6 +149,8 @@ def get_config(model="EM"):
             'use_avg_reg': True,
             'val_size': 5000,
             'vmax': 100,
+            'ground_truth_file': '/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/LSV1M/pos_and_ori.pkl',
+            'average_test_trials': True,
         }
 
     elif model == "BM":
@@ -214,7 +216,10 @@ def get_config(model="EM"):
             'train_on_val': False,
             'upsampling': 1,
             'use_avg_reg': True,
-            'val_size': 5000
+            'val_size': 5000,
+            'ground_truth_file': '/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/LSV1M/pos_and_ori.pkl',
+            'average_test_trials': True,
+
         }
     elif model == 'encoder':
         return{
@@ -281,7 +286,10 @@ def get_config(model="EM"):
             'train_on_val': False,
             'upsampling': 2,
             'use_avg_reg': True,
-            'val_size': 5000
+            'val_size': 5000,
+            'ground_truth_file': '/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/LSV1M/pos_and_ori.pkl',
+            'average_test_trials': True,
+
         }
 
     raise ValueError("Unknown model: {}".format(model))

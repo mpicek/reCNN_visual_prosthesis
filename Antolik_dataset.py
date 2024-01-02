@@ -383,10 +383,10 @@ class AntolikDataModule(pl.LightningDataModule):
         """
         return self.train_dataset.get_ground_truth(**kwargs)
     
-    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False):
+    def visualize_orientation_map(self, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, positions_minus_y=True, positions_minus_x=False, positions_swap_axes=False):
         
         fig, ax = plt.subplots()
-        x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, positions_minus_y, positions_minus_x, positions_swap_axes)
+        x, y, o = self.get_ground_truth(in_degrees=in_degrees, positions_minus_y=positions_minus_y, positions_minus_x=positions_minus_x, positions_swap_axes=positions_swap_axes)
         reconstruct_orientation_maps(x, y, o, fig, ax, save, 12, 2.4, 2.4, img_path, suffix, neuron_dot_size)
 
     def get_input_shape(self):
@@ -603,10 +603,8 @@ class AntolikDataModule(pl.LightningDataModule):
 
 if __name__ == "__main__":
 
-    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/one_trials.pickle"
-    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/ten_trials.pickle"
-
-    path_small_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik/small_train.pickle"
+    path_train = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/one_trials.pickle"
+    path_test = "/storage/brno2/home/mpicek/reCNN_visual_prosthesis/data/antolik_reparametrized_small/ten_trials.pickle"
 
     dm = AntolikDataModule(path_test, path_test, 10, val_size=500)
     dm.prepare_data()

@@ -31,8 +31,6 @@ class ExtendedEncodingModel(encoding_model):
     """Parent class for system identification enconding models, keeps track of useful metrics
 
     In config:
-        - test_average_batch: whether to average responses in batches when computing
-            the test set correlation (used in repeated trials to cancel the neural variability)
         - compute_oracle_fraction: whether to compute oracle fraction or not
         - conservative_oracle: whether to compute conservative oracle or not
         - jackknife_oracle: whether to compute jackknife oracle or not
@@ -43,7 +41,6 @@ class ExtendedEncodingModel(encoding_model):
     def __init__(self, **config):
         super().__init__()
         self.config = config
-        self.test_average_batch = config["test_average_batch"]
         self.compute_oracle_fraction = config["compute_oracle_fraction"]
         self.conservative_oracle = config["conservative_oracle"]
         self.jackknife_oracle = config["jackknife_oracle"]
@@ -102,35 +99,25 @@ class ExtendedEncodingModel(encoding_model):
 
     def test_step(self, batch, batch_idx):
         """
-        - If self.test_average_batch == True, then we average the responses of
-            the batch (because it is the same image shown multiple times to cancel
-            out the noise)
-
-        - We just get prediction and return them with target. Later in validation_epoch_end,
-            we compute the correlation on the whole validation set (and not on separate
-            batches with final averaging).
+        Defines what to do at each test step.
+        We just get prediction and return them with target. Later in self.test_epoch_end,
+        we compute the correlation on the whole test set (and not on separate
+        batches with final averaging)
 
         Args:
-            batch (tuple): tuple of (imgs, responses). The images might be all the
-                same in case of the oracle dataset for evaluation of the averaged trial correlation.
+            batch (tuple): tuple of (imgs, responses)
             batch_idx (int): Index of the batch
 
         Returns:
-            tuple: (prediction of responses, true responses of each trial (might be averaged), true responses of each trial (never averaged))
+            tuple: (prediction of responses, true responses)
         """
 
         img, resp = batch
-        responses_no_mean = resp
-
-        if self.test_average_batch:
-            # I take only one image as all images are the same (it is a repeated trial)
-            # .unsqueeze(0) adds one dimension at the beginning (because I need
-            # to create a batch of size 1)
-            img = img[0].unsqueeze(0)
-            resp = resp.mean(0).unsqueeze(0)
-
         prediction = self.forward(img)
-        return prediction, resp, responses_no_mean
+        loss = self.loss(prediction, resp)
+        self.log("test/loss", loss)
+
+        return prediction.detach().cpu().numpy(), resp.detach().cpu().numpy()
 
     def configure_optimizers(self):
         """Configures the optimizer for the training of the model (Adam).
@@ -142,68 +129,52 @@ class ExtendedEncodingModel(encoding_model):
         return opt
 
     def test_epoch_end(self, test_outs):
-        """We compute a correlation on the WHOLE test set. Predictions with target
-        responses are in test_outs (= what each self.test_step() returned)
+        """We compute the correlation on the whole test set. Predictions with target
+        responses are in test_outs (= what each test_step() returned)
 
         Args:
             test_outs (list): What each self.test_step() returned
-        """
+        """        
         pred = []
         resp = []
-        batch_of_responses = []
-        num_of_repeats = None
-        for (p, r, r_batches) in test_outs:
+        correlation = None
 
-            # The number of repeats in the repeated trials have to be the same.
-            # We will use the first batch as an indicator, how many trials should
-            # be in every batch. If some batch does not have the same number of
-            # repeats, we discard the batch
-            if num_of_repeats == None:
-                num_of_repeats = r_batches.shape[0]
+        # when the test set is too large, we compute the correlation on the
+        # first 100 trials and then on the next 100 trials and so on
 
-            pred.append(p.detach().cpu().numpy())
-            resp.append(r.detach().cpu().numpy())
+        if len(test_outs) > 100:
+            
+            correlation_array = []
+            for i, (p, r) in enumerate(test_outs):
+                pred.append(p)
+                resp.append(r)
+                
+                if len(pred) % 500 == 0:
+                    predictions = np.concatenate(pred)
+                    responses = np.concatenate(resp)
+                    correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
+                    correlation_array.append(correlation)
+                    pred = []
+                    resp = []
 
-            if (
-                r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction
-            ):  # does not have the appropriate number of repeats
-                batch_of_responses.append(r_batches.detach().cpu().numpy())
+            correlation = np.stack(correlation_array)
+            correlation = np.mean(correlation, axis=0)
 
-        predictions = np.concatenate(pred)
-        responses = np.concatenate(resp)
-        correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
-
-        batches_of_responses = None
-        if self.compute_oracle_fraction:
-            batches_of_responses = np.stack(batch_of_responses)
-
-        if self.test_average_batch:
-            self.log("test/repeated_trials/corr", np.mean(correlation))
         else:
-            self.log("test/corr", np.mean(correlation))
+            for i, (p, r) in enumerate(test_outs):
+                pred.append(p)
+                resp.append(r)
+    
+            predictions = np.concatenate(pred)
+            responses = np.concatenate(resp)
+            correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
 
-        if self.compute_oracle_fraction:
-            if self.jackknife_oracle:
-                oracles = oracle_corr_jackknife(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(
-                    oracles,
-                    correlation,
-                    generate_figure=self.generate_oracle_figure,
-                    oracle_label="Oracles jackknife",
-                    fig_name="oracle_jackknife.png",
-                )
-                self.log("test/fraction_oracle_jackknife", fraction_of_oracles[0])
 
-            if self.conservative_oracle:
-                oracles = oracle_corr_conservative(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(
-                    oracles,
-                    correlation,
-                    generate_figure=self.generate_oracle_figure,
-                    oracle_label="Oracles conservative",
-                    fig_name="oracle_conservative.png",
-                )
-                self.log("test/fraction_oracle_conservative", fraction_of_oracles[0])
+        print(np.mean(correlation))
+        print("\nCorrelation on test: ", np.mean(correlation))
+
+        # the name of the log has to be defined beforehand
+        self.log(self.test_log_name, np.mean(correlation))
 
     def validation_epoch_end(self, val_outs):
         """We compute the correlation on the whole set. Predictions with target
@@ -221,6 +192,7 @@ class ExtendedEncodingModel(encoding_model):
         predictions = np.concatenate(pred)
         responses = np.concatenate(resp)
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
+        print("\nCorrelation on val: ", np.mean(correlation))
         self.log("val/corr", np.mean(correlation))
 
 
@@ -318,7 +290,7 @@ class reCNN_bottleneck_CyclicGauss3d_individual_neuron_scaling(ExtendedEncodingM
         self.log("reg/readout_reg", readout_reg)
         return reg_term
     
-    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5):
+    def visualize_orientation_map(self, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5):
         
         fig, ax = plt.subplots()
         x, y, o = get_neuron_estimates(self, 5.5)
@@ -382,8 +354,6 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
             init_sigma_range=self.config["init_sigma_range"],
             init_mu_range=self.config["init_mu_range"],
             fixed_sigma=self.config["fixed_sigma"],
-            ground_truth_positions_file_path=config["ground_truth_positions_file_path"],
-            ground_truth_orientations_file_path=config["ground_truth_orientations_file_path"],
             init_to_ground_truth_positions=config["init_to_ground_truth_positions"],
             init_to_ground_truth_orientations=config["init_to_ground_truth_orientations"],
             freeze_positions=config["freeze_positions"],
@@ -445,7 +415,7 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
         self.log("reg/readout_reg", readout_reg)
         return reg_term
     
-    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, factor=5.5, shift=0, swap_y_axis=False, neuron_id="all"):
+    def visualize_orientation_map(self, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, factor=5.5, shift=0, swap_y_axis=False, neuron_id="all"):
         """shift is in degrees"""
 
         shift = (shift * np.pi) / 180 # from degrees to radians
@@ -454,7 +424,6 @@ class reCNN_bottleneck_CyclicGauss3d_no_scaling(ExtendedEncodingModel):
         x, y, o = get_neuron_estimates(self, factor)
         o = [i*np.pi for i in o]
         o = [(i + shift)%np.pi for i in o]
-        # x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path)
 
         if neuron_id != "all":
             x = x[neuron_id]
@@ -511,8 +480,6 @@ class Lurz_Control_Model(ExtendedEncodingModel):
         )
 
         self.init_to_ground_truth_positions = config["init_to_ground_truth_positions"]
-        self.ground_truth_positions_file_path = config["ground_truth_positions_file_path"]
-        self.ground_truth_orientations_file_path = config["ground_truth_orientations_file_path"]
         self.positions_minus_x = config["positions_minus_x"]
         self.positions_minus_y = config["positions_minus_y"]
         self.do_not_sample = config["do_not_sample"]
@@ -526,7 +493,7 @@ class Lurz_Control_Model(ExtendedEncodingModel):
 
         if self.init_to_ground_truth_positions == True:
             print("initializing to ground truth")
-            pos_x, pos_y, _ = dataloader.get_ground_truth(ground_truth_positions_file_path=self.ground_truth_positions_file_path, ground_truth_orientations_file_path=self.ground_truth_orientations_file_path, in_degrees=True, positions_minus_y=self.positions_minus_y, positions_minus_x=self.positions_minus_x, positions_swap_axes=self.positions_swap_axes)
+            pos_x, pos_y, _ = dataloader.get_ground_truth(in_degrees=True, positions_minus_y=self.positions_minus_y, positions_minus_x=self.positions_minus_x, positions_swap_axes=self.positions_swap_axes)
             pos_x = torch.from_numpy(pos_x)
             pos_y = torch.from_numpy(pos_y)
             # works also when the stimulus is cropped (self.get_stimulus_visual_angle()

@@ -288,15 +288,12 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
     def __init__(
         self,
         *args,
-        ground_truth_positions_file_path="data/antolik/positions_reparametrized.pickle",
-        ground_truth_orientations_file_path="data/antolik/oris_reparametrized.pickle",
         init_to_ground_truth_positions=False,
         init_to_ground_truth_orientations=False,
         freeze_positions=False,
         freeze_orientations=False,
         orientation_shift=87.42857142857143, #in degrees
         factor = 5.5,
-        filtered_neurons=None,
         # dataloader=None,
         positions_minus_x=False,
         positions_minus_y=False,
@@ -305,15 +302,12 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
     ):
         """The constructor
         """
-        self.ground_truth_positions_file_path = ground_truth_positions_file_path
-        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
         self.init_to_ground_truth_positions = init_to_ground_truth_positions
         self.init_to_ground_truth_orientations = init_to_ground_truth_orientations
         self.freeze_positions = freeze_positions
         self.freeze_orientations = freeze_orientations
         self.orientation_shift = orientation_shift
         self.factor = factor
-        self.filtered_neurons = filtered_neurons
         # self.dataloader = dataloader
         self.positions_minus_x = positions_minus_x
         self.positions_minus_y = positions_minus_y
@@ -365,8 +359,6 @@ class Gaussian3dCyclicNoScale(Gaussian3dCyclic):
 
         if dataloader and (self.init_to_ground_truth_positions or self.init_to_ground_truth_orientations):
             pos_x, pos_y, target_ori = dataloader.get_ground_truth(
-                ground_truth_positions_file_path=self.ground_truth_positions_file_path,
-                ground_truth_orientations_file_path=self.ground_truth_orientations_file_path,
                 positions_minus_x=self.positions_minus_x,
                 positions_minus_y=self.positions_minus_y,
                 in_degrees=True,

@@ -87,7 +87,6 @@ class EnergyModel(pl.LightningModule):
         min_init_sigma_value = 0.01
         min_init_f_value = 0.00001
 
-        self.test_average_batch = config["test_average_batch"]
         self.compute_oracle_fraction = config["compute_oracle_fraction"]
         self.conservative_oracle = config["conservative_oracle"]
         self.jackknife_oracle = config["jackknife_oracle"]
@@ -104,6 +103,16 @@ class EnergyModel(pl.LightningModule):
 
         # initializing the parameters
         if exact_init:
+            if scale_init is not None:
+                self.scale = torch.nn.Parameter(torch.ones(1) * scale_init)
+            else:
+                self.scale = torch.nn.Parameter(torch.rand(1))
+
+            if bias_init is not None:
+                self.bias = torch.nn.Parameter(torch.ones(1) * bias_init)
+            else:
+                self.bias = torch.nn.Parameter(torch.rand(1))
+
             if sigma_x_init is not None and sigma_y_init is not None:
                 self.sigma_x = torch.nn.Parameter(torch.ones(1) * sigma_x_init)
                 self.sigma_y = torch.nn.Parameter(torch.ones(1) * sigma_y_init)
@@ -117,6 +126,16 @@ class EnergyModel(pl.LightningModule):
                 self.f = torch.nn.Parameter(torch.rand(1) + min_init_f_value)
             
         else:
+            if scale_init is not None:
+                self.scale = torch.nn.Parameter(torch.FloatTensor(1).uniform_(scale_init - 0.05, scale_init + 0.05))
+            else:
+                self.scale = torch.nn.Parameter(torch.rand(1))
+
+            if bias_init is not None:
+                self.bias = torch.nn.Parameter(torch.FloatTensor(1).uniform_(bias_init - 0.05, bias_init + 0.05))
+            else:
+                self.bias = torch.nn.Parameter(torch.rand(1))
+
             if sigma_x_init is not None and sigma_y_init is not None:
                 self.sigma_x = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_x_init - 0.05, sigma_x_init + 0.05))
                 self.sigma_y = torch.nn.Parameter(torch.FloatTensor(1).uniform_(sigma_y_init - 0.05, sigma_y_init + 0.05))
@@ -197,7 +216,6 @@ class EnergyModel(pl.LightningModule):
         self.original_positions_x = self.positions_x
         self.original_positions_y = self.positions_y
 
-
         # we rotate the meshgrids according to the shifted orientations
         if self.counter_clockwise_rotation:
             meshgrid_x_rotated = meshgrid_x * torch.cos(
@@ -224,7 +242,6 @@ class EnergyModel(pl.LightningModule):
             self.positions_x = tmp_x
             self.positions_y = tmp_y
 
-            
         # and we register the meshgrids in pytorch
         self.register_buffer("meshgrid_x_rotated", meshgrid_x_rotated)
         self.register_buffer("meshgrid_y_rotated", meshgrid_y_rotated)
@@ -322,7 +339,7 @@ class EnergyModel(pl.LightningModule):
         )
 
         # response of each neuron to each image in a batch .. therefore shape of [batch_size, num_neurons]
-        input_to_nonlin = torch.square(filtered_image_odd) + torch.square(filtered_image_even)
+        input_to_nonlin = self.bias + self.scale * torch.sqrt(torch.square(filtered_image_odd) + torch.square(filtered_image_even))
         input_reshaped = input_to_nonlin.view(-1, 1)
         energy_model_response = self.nonlin(input_reshaped).view(input_to_nonlin.shape)
 
@@ -365,100 +382,61 @@ class EnergyModel(pl.LightningModule):
         return prediction, resp
 
     def test_step(self, batch, batch_idx):
-        """
-        - If self.test_average_batch == True, then we average the responses of
-            the batch (because it is the same image shown multiple times to cancel
-            out the noise)
-
-        - We just get prediction and return them with target. Later in validation_epoch_end,
-            we compute the correlation on the whole validation set (and not on separate
-            batches with final averaging).
-
-        Args:
-            batch (tuple): tuple of (imgs, responses). The images might be all the
-                same in case of the oracle dataset for evaluation of the averaged trial correlation.
-            batch_idx (int): Index of the batch
-
-        Returns:
-            tuple: (prediction of responses, true responses of each trial (might be averaged), true responses of each trial (never averaged))
-        """
-
         img, resp = batch
-        responses_no_mean = resp
-
-        if self.test_average_batch:
-            # I take only one image as all images are the same (it is a repeated trial)
-            # .unsqueeze(0) adds one dimension at the beginning (because I need
-            # to create a batch of size 1)
-            img = img[0].unsqueeze(0)
-            resp = resp.mean(0).unsqueeze(0)
-
         prediction = self.forward(img)
-        return prediction, resp, responses_no_mean
 
+        return prediction.detach().cpu().numpy(), resp.detach().cpu().numpy()
+    
     def test_epoch_end(self, test_outs):
-        """We compute a correlation on the WHOLE test set. Predictions with target
-        responses are in test_outs (= what each self.test_step() returned)
+        """We compute the correlation on the whole set. Predictions with target
+        responses are in val_outs (= what each val_step() returned)
 
         Args:
-            test_outs (list): What each self.test_step() returned
+            val_outs (list): What each self.validation_step() returned
         """
         pred = []
         resp = []
-        batch_of_responses = []
-        num_of_repeats = None
-        for (p, r, r_batches) in test_outs:
+        correlation = None
 
-            # The number of repeats in the repeated trials have to be the same.
-            # We will use the first batch as an indicator, how many trials should
-            # be in every batch. If some batch does not have the same number of
-            # repeats, we discard the batch
-            if num_of_repeats == None:
-                num_of_repeats = r_batches.shape[0]
+        # when the test set is too large, we compute the correlation on the
+        # first 100 trials and then on the next 100 trials and so on
 
-            pred.append(p.detach().cpu().numpy())
-            resp.append(r.detach().cpu().numpy())
+        if len(test_outs) > 500:
+            
+            correlation_array = []
+            for i, (p, r) in enumerate(test_outs):
+                pred.append(p)
+                resp.append(r)
+                
+                if len(pred) % 500 == 0:
+                    predictions = np.concatenate(pred)
+                    responses = np.concatenate(resp)
+                    correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
+                    correlation_array.append(correlation)
+                    pred = []
+                    resp = []
 
-            if (
-                r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction
-            ):  # does not have the appropriate number of repeats
-                batch_of_responses.append(r_batches.detach().cpu().numpy())
+            correlation = np.stack(correlation_array)
+            correlation = np.mean(correlation, axis=0)
 
-        predictions = np.concatenate(pred)
-        responses = np.concatenate(resp)
-        correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
-
-        batches_of_responses = None
-        if self.compute_oracle_fraction:
-            batches_of_responses = np.stack(batch_of_responses)
-
-        if self.test_average_batch:
-            self.log("test/repeated_trials/corr", np.mean(correlation))
         else:
-            self.log("test/corr", np.mean(correlation))
+            for i, (p, r) in enumerate(test_outs):
+                pred.append(p)
+                resp.append(r)
+    
+            predictions = np.concatenate(pred)
+            responses = np.concatenate(resp)
+            correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
 
-        if self.compute_oracle_fraction:
-            if self.jackknife_oracle:
-                oracles = oracle_corr_jackknife(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(
-                    oracles,
-                    correlation,
-                    generate_figure=self.generate_oracle_figure,
-                    oracle_label="Oracles jackknife",
-                    fig_name="oracle_jackknife.png",
-                )
-                self.log("test/fraction_oracle_jackknife", fraction_of_oracles[0])
+        print(correlation.max())
+        print(correlation.argmax())
+        print(correlation.min())
+        print(correlation.argmin())
+        print(np.mean(correlation))
+        print("\nCorrelation on test: ", np.mean(correlation))
 
-            if self.conservative_oracle:
-                oracles = oracle_corr_conservative(batches_of_responses)
-                fraction_of_oracles = get_fraction_oracles(
-                    oracles,
-                    correlation,
-                    generate_figure=self.generate_oracle_figure,
-                    oracle_label="Oracles conservative",
-                    fig_name="oracle_conservative.png",
-                )
-                self.log("test/fraction_oracle_conservative", fraction_of_oracles[0])
+        # the name of the log has to be defined beforehand
+        self.log(self.test_log_name, np.mean(correlation))
 
     def validation_epoch_end(self, val_outs):
         """We compute the correlation on the whole set. Predictions with target
@@ -478,8 +456,8 @@ class EnergyModel(pl.LightningModule):
         correlation = corr_from_neuralpredictors(predictions, responses, axis=0)
         self.predictions = predictions
         self.responses = responses
-        print(np.mean(correlation))
-        print(np.mean(correlation))
+
+        print(f"\nCorrelation: {np.mean(correlation)}")
         self.log("val/corr", np.mean(correlation))
 
     def visualize(
@@ -627,7 +605,6 @@ class EnergyModelIndividual(pl.LightningModule):
         min_init_sigma_value = 0.01
         min_init_f_value = 0.00001
 
-        self.test_average_batch = config["test_average_batch"]
         self.compute_oracle_fraction = config["compute_oracle_fraction"]
         self.conservative_oracle = config["conservative_oracle"]
         self.jackknife_oracle = config["jackknife_oracle"]
@@ -903,36 +880,16 @@ class EnergyModelIndividual(pl.LightningModule):
         return prediction, resp
 
     def test_step(self, batch, batch_idx):
-        """
-        - If self.test_average_batch == True, then we average the responses of
-            the batch (because it is the same image shown multiple times to cancel
-            out the noise)
-
-        - We just get prediction and return them with target. Later in validation_epoch_end,
-            we compute the correlation on the whole validation set (and not on separate
-            batches with final averaging).
-
-        Args:
-            batch (tuple): tuple of (imgs, responses). The images might be all the
-                same in case of the oracle dataset for evaluation of the averaged trial correlation.
-            batch_idx (int): Index of the batch
-
-        Returns:
-            tuple: (prediction of responses, true responses of each trial (might be averaged), true responses of each trial (never averaged))
-        """
 
         img, resp = batch
-        responses_no_mean = resp
-
-        if self.test_average_batch:
-            # I take only one image as all images are the same (it is a repeated trial)
-            # .unsqueeze(0) adds one dimension at the beginning (because I need
-            # to create a batch of size 1)
-            img = img[0].unsqueeze(0)
-            resp = resp.mean(0).unsqueeze(0)
-
         prediction = self.forward(img)
-        return prediction, resp, responses_no_mean
+        loss = self.loss(prediction, resp)
+        self.log("test/loss", loss)
+
+
+
+
+        return prediction.detach().cpu().numpy().mean(axis=0, keepdims=True), resp.detach().cpu().numpy().mean(axis=0, keepdims=True)
 
     def test_epoch_end(self, test_outs):
         """We compute a correlation on the WHOLE test set. Predictions with target
@@ -941,6 +898,7 @@ class EnergyModelIndividual(pl.LightningModule):
         Args:
             test_outs (list): What each self.test_step() returned
         """
+
         pred = []
         resp = []
         batch_of_responses = []
@@ -954,8 +912,8 @@ class EnergyModelIndividual(pl.LightningModule):
             if num_of_repeats == None:
                 num_of_repeats = r_batches.shape[0]
 
-            pred.append(p.detach().cpu().numpy())
-            resp.append(r.detach().cpu().numpy())
+            pred.append(p)
+            resp.append(r)
 
             if (
                 r_batches.shape[0] == num_of_repeats and self.compute_oracle_fraction
@@ -1022,7 +980,6 @@ class EnergyModelIndividual(pl.LightningModule):
         print(correlation.argmin())
         self.log("val/corr", np.mean(correlation))
         print(np.mean(correlation))
-        # self.visualize(444)
 
     def visualize(
         self,
@@ -1308,6 +1265,7 @@ class EnergyModelLearnableShift(pl.LightningModule):
         self.log("ori_shift", self.ori_shift)
 
     def test_step(self, batch, batch_idx):
+        
         img, resp = batch
         prediction = self.forward(img)
         loss = self.loss(prediction, resp)

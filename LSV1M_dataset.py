@@ -14,6 +14,8 @@ import math
 from experiments.utils import pickle_read, reconstruct_orientation_maps
 import os
 import shutil
+import torch.nn.functional as F
+from skimage.transform import resize
 
 class LSV1MDatasetSingleTrial(Dataset):
     """A class for handling the LSV1M Single Trial synthetic dataset."""    
@@ -34,17 +36,13 @@ class LSV1MDatasetSingleTrial(Dataset):
             [transforms.Normalize((46.1058,), (26.8956,))]
         )
 
-        self.input_mean = 46.1058
-        self.input_std = 26.8956
-        self.target_mean = 2.6297
-        self.target_std = 2.2849
+        self.input_mean = 46.1324
+        self.input_std = 24.4895
+        self.target_mean = 3.4808
+        self.target_std = 3.1232
 
         self.indices_representation = self.get_internal_indices_representation()
         self.indices = self.get_indices()
-
-    def set_ground_truth_files(self, ground_truth_positions_file_path, ground_truth_orientations_file_path):
-        self.ground_truth_positions_file_path = ground_truth_positions_file_path
-        self.ground_truth_orientations_file_path = ground_truth_orientations_file_path
 
     def __getitem__(self, index):
         """Gets the index-th pair of visual stimulus and response to the stimulus.
@@ -75,12 +73,10 @@ class LSV1MDatasetSingleTrial(Dataset):
 
         if self.normalize:
             data = self.input_transform_list(data)
-            target = (target - self.target_mean) / self.target_std
-        
+
         return (data.float(), target.float())
     
     def visualize(self, index):
-        index = self.indices[index]
         stimulus, _ = self.__getitem__(index)
         plt.imshow(stimulus.numpy()[0], cmap='gray')
 
@@ -107,6 +103,10 @@ class LSV1MDatasetSingleTrial(Dataset):
         return indices
 
     def get_indices(self):
+        """
+        Returns:
+            np.array: The indices of the dataset (just 0, 1, 2, ... len(indices))
+        """
         return np.arange(len(self.indices_representation))
     
     def get_ground_truth(self, ground_truth_file=None, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False, **kwargs):
@@ -126,7 +126,7 @@ class LSV1MDatasetSingleTrial(Dataset):
 
         if ground_truth_file is None:
             ground_truth_file = self.ground_truth_file
-        
+
         data = pickle_read(ground_truth_file)
         target_positions_x = np.concatenate([data['V1_Exc_L23']['pos_x'], data['V1_Inh_L23']['pos_x']])
         target_positions_y = np.concatenate([data['V1_Exc_L23']['pos_y'], data['V1_Inh_L23']['pos_y']])
@@ -147,7 +147,7 @@ class LSV1MDatasetSingleTrial(Dataset):
             pos_x, pos_y = pos_y, pos_x
 
 
-        target_ori = np.concatenate([data['V1_Exc_L23']['ori'], data['V1_Inh_L23']['ori']])
+        target_ori = np.concatenate([np.array(data['V1_Exc_L23']['ori']), np.array(data['V1_Inh_L23']['ori'])])
         
         if in_degrees:
             target_ori = 180*(target_ori / np.pi) # from [0, pi] to [0, 180]
@@ -157,7 +157,7 @@ class LSV1MDatasetSingleTrial(Dataset):
 class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
     """A class for handling the LSV1M Multi Trial synthetic dataset."""    
 
-    def __init__(self, path, normalize=True, ground_truth_file=None, **kwargs):
+    def __init__(self, path, normalize=True, ground_truth_file=None, average_test_trials=True, **kwargs):
         """The constructor.
 
         Args:
@@ -165,7 +165,9 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
             normalize (bool, optional): Whether to normalize the images. Defaults to True.
             ground_truth_file (str, optional): Path to the file with the ground truth of positions and orientations of neurons.
         """
+        self._average_test_trials = None
         super().__init__(path, normalize, ground_truth_file, **kwargs)
+        self.average_test_trials = average_test_trials
 
     def __getitem__(self, index):
         """Gets the index-th pair of visual stimulus and response to the stimulus.
@@ -176,39 +178,46 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
         Returns:
             (np.array, np.array): The index-th pair of visual stimulus and response to the stimulus.
         """
-        loaded_files = {}
 
         index = self.indices_representation[index]
 
-        # go one folder back from path and get from there the stimulus path
-        stimulus_path = os.path.join(os.path.dirname(index), "stimulus.npy")
+        stimulus_path = None
+        target = None
 
-        for file in os.listdir(os.path.join(self.path, index)):
-            # load npy file into loaded_files without the .npy extension
-            filename = os.path.join(self.path, index, file)
-            loaded_files[file[:-4]] = np.load(filename)
+        if self.average_test_trials:
+            stimulus_path = os.path.join(self.path, index, "stimulus.npy")
+            target = np.concatenate(
+                [np.load(os.path.join(self.path, index, "V1_Exc_L23_averaged.npy")),
+                np.load(os.path.join(self.path, index, "V1_Inh_L23_averaged.npy"))]
+            )
+        else:
+            stimulus_path = os.path.join(os.path.dirname(index), "stimulus.npy")
+            target = np.concatenate(
+                [np.load(os.path.join(index, "V1_Exc_L23.npy")),
+                np.load(os.path.join(index, "V1_Inh_L23.npy"))]
+            )
         
         x = np.load(stimulus_path)
         x = np.expand_dims(x, axis=0)
-        y = np.concatenate(
-            [loaded_files["V1_Exc_L23"], loaded_files["V1_Inh_L23"]]
-        )
 
         data = torch.from_numpy(x)
-        target = torch.from_numpy(y)
+        target = torch.from_numpy(target)
 
         if self.normalize:
-            data = self.transform_list(data)
+            data = self.input_transform_list(data)
         
         return (data.float(), target.float())
     
     def get_internal_indices_representation(self):
         """
         Indices of the dataset are not trivial (not integers from 0 to n).
-        Each index is a complex string characterising the stimulus-response pair.
+        Each index is a complex string characterizing the stimulus-response pair.
 
         This method returns a list of indices so that we can get a stimulus-response
         pair by typing dataset[indices[i]].
+
+        For averaged, the indices are just the number of trials (0000200000, 0000200001, ...),
+        for not averaged, it is the whole path for each subtrial ('/some_path/multi_trial/0000200000/trial=0', '/some_path/multi_trial/0000200000/trial=1', ...)
         """
 
         indices = []
@@ -216,17 +225,47 @@ class LSV1MDatasetMultiTrial(LSV1MDatasetSingleTrial):
         subfolders = os.listdir(self.path)
         subfolders.sort()  # Sort the indices in ascending order
 
-        for subfolder in subfolders:
-            trials = os.listdir(os.path.join(self.path, subfolder))
-            trials.sort()
-            # delete trial with name "stimulus.npy" and make the indices whole paths
-            whole_path_trials = [os.path.join(self.path, subfolder, trial) for trial in trials if trial != "stimulus.npy"]
-            indices += whole_path_trials
+        if self.average_test_trials:
+            for subfolder in subfolders:
+                indices.append(subfolder)
+        else:
+            for subfolder in subfolders:
+                trials = os.listdir(os.path.join(self.path, subfolder))
+                trials.sort()
+                # delete trial with name stimulus.npy, V1_Inh_L23_averaged.npy and V1_Exc_L23_averaged.npy and make the indices whole paths
+                whole_path_trials = [os.path.join(self.path, subfolder, trial) for trial in trials if trial != "stimulus.npy" and trial != "V1_Inh_L23_averaged.npy" and trial != "V1_Exc_L23_averaged.npy"]
+                indices += whole_path_trials
         
         return indices
     
     def get_indices(self):
+        """
+        Returns:
+            np.array: The indices of the dataset (just 0, 1, 2, ... len(indices))
+        """
         return np.arange(len(self.get_internal_indices_representation()))
+    
+    @property
+    def average_test_trials(self):
+        return self._average_test_trials
+    
+    @average_test_trials.setter
+    def average_test_trials(self, average_test_trials):
+        """
+        When we change the average_test_trials, we have to change the indices_representation and indices.
+        """
+        self._average_test_trials = average_test_trials
+        self.indices_representation = self.get_internal_indices_representation()
+        self.indices = self.get_indices()
+    
+    @average_test_trials.getter
+    def average_test_trials(self):
+        return self._average_test_trials
+    
+    @average_test_trials.deleter
+    def average_test_trials(self):
+        del self._average_test_trials
+
 
 
 class LSV1MDataModule(pl.LightningDataModule):
@@ -244,6 +283,7 @@ class LSV1MDataModule(pl.LightningDataModule):
         normalize=True,
         num_workers=0,
         val_size=5000,
+        average_test_trials=True,
         brain_crop=None,
         stimulus_crop=None,
         ground_truth_file=None,
@@ -280,6 +320,7 @@ class LSV1MDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         # seed=None,
         self.normalize = normalize
+        self.average_test_trials = average_test_trials
         self.num_workers = num_workers
         self.val_size = val_size
 
@@ -325,15 +366,6 @@ class LSV1MDataModule(pl.LightningDataModule):
             train_filename = os.path.basename(self.train_data_dir)
             test_filename = os.path.basename(self.test_data_dir)
 
-            if not pathlib.Path(os.path.join(self.scratch_path, test_filename.split('.')[-2])).exists():
-                destination_test = os.path.join(self.scratch_path, test_filename)
-                print("Copying the test dataset to the scratch directory...", end=" ")
-                shutil.copyfile(self.test_data_dir, destination_test)
-                print("DONE")
-                print("Extracting the test dataset...", end=" ")
-                shutil.unpack_archive(destination_test, os.path.join(self.scratch_path, test_filename.split('.')[-2]))
-                print("DONE")
-
             # the extracted path will have the name of the file but without .zip extension
             # so for example "single_trial" (when the .zip archive is named "single_trial.zip")
             if not pathlib.Path(os.path.join(self.scratch_path, train_filename.split('.')[-2])).exists():
@@ -345,6 +377,14 @@ class LSV1MDataModule(pl.LightningDataModule):
                 shutil.unpack_archive(destination_train, os.path.join(self.scratch_path, train_filename.split('.')[-2]))
                 print("DONE")
 
+            if not pathlib.Path(os.path.join(self.scratch_path, test_filename.split('.')[-2])).exists():
+                destination_test = os.path.join(self.scratch_path, test_filename)
+                print("Copying the test dataset to the scratch directory...", end=" ")
+                shutil.copyfile(self.test_data_dir, destination_test)
+                print("DONE")
+                print("Extracting the test dataset...", end=" ")
+                shutil.unpack_archive(destination_test, os.path.join(self.scratch_path, test_filename.split('.')[-2]))
+                print("DONE")
         
             # change the paths to the scratch directory path
             self.train_data_dir = os.path.join(self.scratch_path, train_filename.split('.')[-2])
@@ -364,7 +404,7 @@ class LSV1MDataModule(pl.LightningDataModule):
         # when stage=None -> both "fit" and "test"
 
         self.train_dataset = LSV1MDatasetSingleTrial(self.train_data_dir, self.normalize, self.ground_truth_file)
-        self.test_dataset = LSV1MDatasetMultiTrial(self.test_data_dir, self.normalize, self.ground_truth_file)
+        self.test_dataset = LSV1MDatasetMultiTrial(self.test_data_dir, self.normalize, self.ground_truth_file, self.average_test_trials)
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage == "predict" or stage is None:
@@ -375,8 +415,6 @@ class LSV1MDataModule(pl.LightningDataModule):
 
             subset_idx_val = indices[0 : self.val_size]
             subset_idx_train = indices[self.val_size :]
-
-            self.subset_idx_val = subset_idx_val
 
             self.train_random_sampler = SubsetRandomSampler(subset_idx_train)
             self.train_sequential_sampler = SubsetSequentialSampler(subset_idx_train)
@@ -414,10 +452,10 @@ class LSV1MDataModule(pl.LightningDataModule):
         """
         return self.train_dataset.get_ground_truth(**kwargs)
     
-    def visualize_orientation_map(self, ground_truth_positions_file_path, ground_truth_orientations_file_path, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False):
+    def visualize_orientation_map(self, save=False, img_path="img/", suffix="_truth", neuron_dot_size=5, in_degrees=False, positions_minus_y=False, positions_minus_x=False, positions_swap_axes=False):
         
         fig, ax = plt.subplots()
-        x, y, o = self.get_ground_truth(ground_truth_positions_file_path, ground_truth_orientations_file_path, in_degrees, positions_minus_y, positions_minus_x, positions_swap_axes)
+        x, y, o = self.get_ground_truth()
         reconstruct_orientation_maps(x, y, o, fig, ax, save, 12, 2.4, 2.4, img_path, suffix, neuron_dot_size)
 
     def get_input_shape(self):
@@ -478,7 +516,7 @@ class LSV1MDataModule(pl.LightningDataModule):
         Returns:
             int: The length of ALL the data we have (train + val + test)
         """        
-        return self.train_len() + self.val_len() + self.test_len()
+        return self.train_len() + self.val_len()# + self.test_len()
 
     def print_dataset_info(self):
         """Creates a train dataloader, gets first piece of data and prints its shape
@@ -540,7 +578,9 @@ class LSV1MDataModule(pl.LightningDataModule):
         """
         Returns:
             DataLoader: The test DataLoader
-        """   
+        """
+        indices = self.test_dataset.indices
+        self.test_sampler = SubsetSequentialSampler(indices)
         return DataLoader(
             self.test_dataset,
             sampler=self.test_sampler,
@@ -575,36 +615,44 @@ class LSV1MDataModule(pl.LightningDataModule):
         Returns:
             dict: Dictionary of the resulting measures.
         """
-        model.test_average_batch = False
-        model.compute_oracle_fraction = False
+        
+        model.test_log_name = "val/corr"
         val_score = trainer.test(model, self.val_dataloader(), verbose=False)
-        test_score = trainer.test(model, self.test_dataloader(), verbose=False)
+        
+        model.test_log_name = "test/not_averaged/corr"
+        self.test_dataset.average_test_trials = False
+        test_score_not_averaged = trainer.test(model, self.test_dataloader(), verbose=False)
 
-        model.test_average_batch = True
-        model.compute_oracle_fraction = True
-        test_repeats_averaged_score = trainer.test(model, self.get_oracle_dataloader(), verbose=False)
+        model.test_log_name = "test/averaged/corr"
+        self.test_dataset.average_test_trials = True
+        test_score_averaged = trainer.test(model, self.test_dataloader(), verbose=False)
 
         val_score = val_score[0]
-        test_score = test_score[0]
-        test_repeats_averaged_score = test_repeats_averaged_score[0]
+        test_score_not_averaged = test_score_not_averaged[0]
+        test_score_averaged = test_score_averaged[0]
 
         print("Validation dataset:")
-        print(f"    Correlation: {'{:.4f}'.format(val_score['test/corr'])} {'({:.2f} percent of the control model)'.format(100 * (val_score['test/corr'] / control_measures['val/corr'])) if control_measures else ''}")
+        print(f"    Correlation: {'{:.4f}'.format(val_score['val/corr'])}")
 
 
         # print("Test dataset:")
         # print(f"    Correlation: {'{:.4f}'.format(test_score['test/corr']) }")
+        print("Test dataset with NOT averaged responses of repeated trials:")
+        print(f"    Correlation: {'{:.4f}'.format(test_score_not_averaged['test/not_averaged/corr'])}")
+
 
         print("Test dataset with averaged responses of repeated trials:")
-        print(f"    Correlation: {'{:.4f}'.format(test_repeats_averaged_score['test/repeated_trials/corr']) } {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/repeated_trials/corr'] / control_measures['test/repeated_trials/corr'])) if control_measures else ''}")
-        print(f"    Fraction oracle conservative: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_conservative'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_conservative'] / control_measures['test/fraction_oracle_conservative'])) if control_measures else ''}")
-        print(f"    Fraction oracle jackknife: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_jackknife'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_jackknife'] / control_measures['test/fraction_oracle_jackknife'])) if control_measures else ''}")
+        print(f"    Correlation: {'{:.4f}'.format(test_score_averaged['test/averaged/corr'])}")
+        # print(f"    Fraction oracle conservative: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_conservative'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_conservative'] / control_measures['test/fraction_oracle_conservative'])) if control_measures else ''}")
+        # print(f"    Fraction oracle jackknife: {'{:.4f}'.format(test_repeats_averaged_score['test/fraction_oracle_jackknife'])} {'({:.2f} percent of the control model)'.format(100 * (test_repeats_averaged_score['test/fraction_oracle_jackknife'] / control_measures['test/fraction_oracle_jackknife'])) if control_measures else ''}")
 
         returned_measures = {
-            "val/corr": val_score['test/corr'],
-            "test/repeated_trials/corr": test_repeats_averaged_score['test/repeated_trials/corr'],
-            "test/fraction_oracle_conservative":test_repeats_averaged_score['test/fraction_oracle_conservative'],
-            "test/fraction_oracle_jackknife":test_repeats_averaged_score['test/fraction_oracle_jackknife']
+            "val/corr": val_score['val/corr'],
+            "test/not_averaged/corr": test_score_not_averaged['test/not_averaged/corr'],
+            "test/averaged/corr": test_score_averaged['test/averaged/corr'],
+            # "test/repeated_trials/corr": test_repeats_averaged_score['test/repeated_trials/corr'],
+            # "test/fraction_oracle_conservative":test_repeats_averaged_score['test/fraction_oracle_conservative'],
+            # "test/fraction_oracle_jackknife":test_repeats_averaged_score['test/fraction_oracle_jackknife']
         }
 
         return returned_measures
