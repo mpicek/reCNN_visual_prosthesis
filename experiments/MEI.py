@@ -41,9 +41,12 @@ class Clip(nn.Module):
         return x
 
 class TrainableImage(nn.Module):
-    def __init__(self, img_size, n=1, c=1):
+    def __init__(self, img_size, n=1, c=1, mei_init=None):
         super().__init__()
-        self.img = nn.Parameter((torch.randn(n, c,*img_size)))
+        if mei_init is not None:
+            self.img = nn.Parameter(torch.from_numpy(np.expand_dims(mei_init, axis=(0, 1))).float())
+        else:
+            self.img = nn.Parameter((torch.randn(n, c,*img_size)))
     def forward(self):
         return self.img
 
@@ -139,7 +142,7 @@ class GaborFilter(nn.Module):
         img_err = torch.square(x - gabor_filter)
         return out, gabor_filter, img_err
 
-def train_mei(model, device, neuron, std=0.1, steps=500, lr=0.02):
+def train_mei(model, device, neuron, std=0.1, steps=100, lr=0.02, mei_init=None):
     
     bar = tqdm(range(steps))
 
@@ -147,7 +150,7 @@ def train_mei(model, device, neuron, std=0.1, steps=500, lr=0.02):
     max_pixel_value = 2.04
     my_clip = StandardizeClip((max_pixel_value + min_pixel_value) / 2, std, min_pixel_value, max_pixel_value)
 
-    im = TrainableImage([55, 55])
+    im = TrainableImage([55, 55], mei_init=mei_init)
 
     optim = torch.optim.Adam(im.parameters(), lr=lr)
 
